@@ -29,9 +29,23 @@ management:
 logging:
   pattern:
     console: "%clr(%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX}){faint} %clr(level=%5p) %clr(app=${spring.application.name}){cyan} %clr(requestId=%X{requestId:-none}){magenta} %clr(thread=%t){faint} %clr(logger=%logger{36}){blue} message=%replace(%m){'[\r\n]+',' '}%n%wEx"
-level:
+  level:
     root: INFO
     ro.scribemed.backend: INFO
     org.springframework.security: INFO
     org.hibernate.SQL: WARN
     org.hibernate.orm.jdbc.bind: WARN
+
+scribemed:
+  session:
+    cookie:
+      secure: ${SCRIBEMED_SESSION_COOKIE_SECURE:true}
+      same-site: ${SCRIBEMED_SESSION_COOKIE_SAME_SITE:Lax}
+
+  dev:
+    seed:
+      enabled: ${SCRIBEMED_DEV_SEED_ENABLED:false}
+      tenant-name: ${SCRIBEMED_DEV_TENANT_NAME:Demo Clinic}
+      doctor-email: ${SCRIBEMED_DEV_DOCTOR_EMAIL:}
+      doctor-password: ${SCRIBEMED_DEV_DOCTOR_PASSWORD:}
+      doctor-display-name: ${SCRIBEMED_DEV_DOCTOR_DISPLAY_NAME:Dr. Demo}
