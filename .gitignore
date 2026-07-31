@@ -1,0 +1,74 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editors and IDEs
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Java / Maven / Spring Boot
+target/
+.mvn/timing.properties
+*.class
+*.jar
+*.war
+*.nar
+hs_err_pid*
+replay_pid*
+!.mvn/wrapper/maven-wrapper.jar
+
+# Node / Next.js / pnpm
+node_modules/
+.next/
+out/
+dist/
+build/
+.turbo/
+.vercel/
+coverage/
+*.tsbuildinfo
+
+# Test and tooling caches
+.eslintcache
+.stylelintcache
+.nyc_output/
+playwright-report/
+test-results/
+
+# Docker and local runtime data
+docker-compose.override.yml
+compose.override.yml
+tmp/
+temp/
+
+# Generated medical/audio/document artifacts for local development
+uploads/
+audio/
+recordings/
+exports/
+generated/
+*.webm
+*.wav
+*.mp3
+*.m4a
+*.ogg
+*.pdf
