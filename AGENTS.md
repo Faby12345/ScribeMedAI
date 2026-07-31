@@ -126,6 +126,17 @@ Respect the existing directory names. Do not rename or reorganize the repository
 * Preserve EU-region and data-protection constraints described in the architecture document.
 * Before any real-patient pilot, the DPIA, retention policy, DPA, incident-response plan, backup restoration test, and tenant-isolation tests must be completed.
 
+### Operational logging
+
+* Use the backend's standard SLF4J logger for technical diagnostics when a log helps operators understand system behavior, failures, or important state transitions.
+* Do not create custom logging abstractions unless there is a concrete operational requirement that SLF4J/Logback cannot satisfy.
+* Keep logs concise and intentional. Do not add entry/exit logs or noisy debug logs around ordinary control flow.
+* Prefer structured key-value context in messages, such as `tenantId`, `consultationId`, `jobId`, `provider`, `status`, `errorCode`, and `durationMs`.
+* Never log transcript text, clinical-note content, prompts, patient names, diagnoses, medications, audio contents, session identifiers, cookies, tokens, passwords, or raw external-provider errors.
+* Sanitize external-provider errors before logging. Log provider error code, HTTP status, provider request ID, duration, and a safe summary only.
+* Use the request correlation ID already attached to backend logs instead of manually inventing request identifiers.
+* Keep business/security audit events separate from operational logs.
+
 ## Implementation workflow
 
 Before editing code:
