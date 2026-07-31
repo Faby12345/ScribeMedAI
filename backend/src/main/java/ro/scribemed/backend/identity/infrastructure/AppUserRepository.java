@@ -9,6 +9,10 @@ import ro.scribemed.backend.identity.domain.UserStatus;
 
 public interface AppUserRepository extends JpaRepository<AppUser, UUID> {
 
+    Optional<AppUser> findByEmail(String email);
+
+    Optional<AppUser> findByEmailAndStatus(String email, UserStatus status);
+
     Optional<AppUser> findByTenant_IdAndEmail(UUID tenantId, String email);
 
     Optional<AppUser> findByIdAndTenant_Id(UUID id, UUID tenantId);

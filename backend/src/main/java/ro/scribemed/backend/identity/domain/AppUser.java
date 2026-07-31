@@ -86,6 +86,10 @@ public class AppUser {
         updatedAt = Instant.now();
     }
 
+    public void markLoggedIn(Instant loggedInAt) {
+        lastLoginAt = loggedInAt;
+    }
+
     public UUID getId() {
         return id;
     }
