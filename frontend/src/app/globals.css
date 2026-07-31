@@ -1,26 +1,76 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f7f5f0;
+  --surface: #ffffff;
+  --surface-muted: #f1f5f4;
+  --foreground: #172126;
+  --muted-foreground: #66737a;
+  --primary: #176b73;
+  --primary-hover: #125760;
+  --primary-foreground: #ffffff;
+  --primary-soft: #e7f3f2;
+  --border: #d9e1df;
+  --input: #c9d4d2;
+  --ring: #2c8b95;
+  --destructive: #b42318;
+  --destructive-hover: #921d14;
+  --destructive-soft: #fdf0ed;
+  --success: #1f7a4d;
+  --success-soft: #eaf6ef;
+  --warning: #9a6700;
+  --warning-soft: #fff7df;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --shadow-card-value: 0 18px 50px rgb(23 33 38 / 8%);
+  --shadow-button-value: 0 1px 2px rgb(23 33 38 / 8%);
+  --shadow-input-value: 0 1px 1px rgb(23 33 38 / 3%);
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
   --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-destructive: var(--destructive);
+  --color-destructive-hover: var(--destructive-hover);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --shadow-card: var(--shadow-card-value);
+  --shadow-button: var(--shadow-button-value);
+  --shadow-input: var(--shadow-input-value);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    color-scheme: light;
   }
 }
 
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+}
+
 body {
+  min-height: 100%;
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }

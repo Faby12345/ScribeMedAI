@@ -17,6 +17,13 @@ ScribeMedAI is a medical documentation MVP that supports the following workflow:
 
 This MVP is not a complete EHR and does not currently include SIUI integration, billing, scheduling, automated diagnosis, or clinical recommendations.
 
+## Product language
+
+* ScribeMedAI targets the Romanian market.
+* All product-facing UI text, page metadata, validation messages, emails, exported document labels, notifications, and support/help copy must be written in Romanian by default.
+* Do not introduce English user-facing text unless the user explicitly requests it or the text is a technical identifier that should not be translated.
+* Keep code identifiers, API field names, database names, logs, and internal technical messages in English unless there is a clear project convention requiring Romanian.
+
 ## Required architecture reference
 
 Before implementing, refactoring, reviewing, or proposing architectural changes, read:
