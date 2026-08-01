@@ -1,3 +1,4 @@
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { LoginForm } from "@/features/auth/components/login-form";
 
@@ -11,90 +12,92 @@ export default function LoginPage() {
       : undefined;
 
   return (
-    <main className="flex min-h-screen bg-background px-5 py-8 sm:px-8 lg:px-12">
-      <div className="mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-[minmax(0,0.92fr)_minmax(380px,440px)]">
-        <section className="hidden lg:block">
-          <div className="max-w-xl">
-            <div className="mb-10 inline-flex items-center gap-3">
-
-
+    <main className="min-h-screen bg-background">
+      <div className="page-container flex min-h-screen items-center py-8 sm:py-12">
+        <div className="grid w-full items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(390px,430px)]">
+          <section className="max-w-2xl">
+            <div className="mb-10 flex items-center gap-3">
+              <div
+                className="flex size-10 items-center justify-center rounded-[var(--radius-control)] bg-primary text-sm font-semibold text-primary-foreground"
+                aria-hidden="true"
+              >
+                SM
+              </div>
+              <div>
+                <p className="text-base font-semibold text-foreground">
+                  ScribeMedAI
+                </p>
+                <p className="caption-text">Documentație medicală asistată</p>
+              </div>
             </div>
 
-            <p className="mb-4 text-sm font-medium uppercase tracking-[0.08em] text-primary">
-              Spațiu pentru documentație clinică
-            </p>
-            <h1 className="max-w-lg text-4xl font-semibold leading-tight tracking-normal text-foreground">
-              Autentifică-te pentru a continua documentarea consultațiilor.
+            <Badge variant="info">Acces securizat pentru personal medical</Badge>
+            <h1 className="mt-5 max-w-xl text-4xl font-semibold leading-tight tracking-normal text-foreground sm:text-5xl">
+              Intră în spațiul clinic al cabinetului tău.
             </h1>
-            <p className="mt-5 max-w-lg text-lg leading-8 text-muted-foreground">
-              Un spațiu de lucru concentrat pentru înregistrarea consultațiilor,
-              revizuirea drafturilor și aprobarea documentelor medicale de către
-              medic.
+            <p className="mt-5 max-w-xl text-base leading-7 text-muted-foreground sm:text-lg sm:leading-8">
+              ScribeMedAI ajută medicii să continue fluxul de documentare fără
+              a pierde controlul asupra conținutului medical.
             </p>
 
-            <div className="mt-10 grid max-w-lg gap-4 sm:grid-cols-2">
-              <div className="rounded-lg border border-border bg-surface/70 p-4">
-                <p className="text-sm font-medium text-foreground">
-                  Acces pe bază de sesiune
-                </p>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  Autentificarea este gestionată de backend prin cookie-uri
-                  securizate.
-                </p>
+            <dl className="mt-8 grid max-w-xl gap-5 border-y border-border py-6 sm:grid-cols-3">
+              <div>
+                <dt className="text-sm font-medium text-foreground">
+                  Sesiuni opace
+                </dt>
+                <dd className="mt-1 text-sm leading-6 text-muted-foreground">
+                  Cookie-uri gestionate de backend.
+                </dd>
               </div>
-              <div className="rounded-lg border border-border bg-surface/70 p-4">
-                <p className="text-sm font-medium text-foreground">
-                  Drafturile rămân drafturi
-                </p>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  Conținutul generat de AI necesită revizuirea explicită a
-                  medicului.
-                </p>
+              <div>
+                <dt className="text-sm font-medium text-foreground">
+                  Control medical
+                </dt>
+                <dd className="mt-1 text-sm leading-6 text-muted-foreground">
+                  Drafturile necesită aprobare explicită.
+                </dd>
               </div>
-            </div>
-          </div>
-        </section>
+              <div>
+                <dt className="text-sm font-medium text-foreground">
+                  Date protejate
+                </dt>
+                <dd className="mt-1 text-sm leading-6 text-muted-foreground">
+                  Fără tokenuri în stocarea locală.
+                </dd>
+              </div>
+            </dl>
+          </section>
 
-        <section className="mx-auto w-full max-w-md lg:mx-0">
-          <div className="mb-8 flex items-center gap-3 lg:hidden">
-            <div
-              className="flex size-10 items-center justify-center rounded-lg border border-primary/20 bg-primary-soft text-sm font-semibold text-primary"
-              aria-hidden="true"
-            >
-              SM
-            </div>
-            <span className="text-lg font-semibold text-foreground">
-              ScribeMedAI
-            </span>
-          </div>
+          <section className="w-full">
+            <Card variant="elevated" className="mx-auto max-w-md">
+              <CardHeader className="p-6 pb-4">
+                <p className="text-sm font-medium text-primary">
+                  Bine ai revenit
+                </p>
+                <h2 className="text-2xl font-semibold tracking-normal text-foreground">
+                  Autentificare
+                </h2>
+                <p className="secondary-text">
+                  Folosește contul clinicii pentru a accesa panoul medical.
+                </p>
+              </CardHeader>
+              <CardContent className="p-6 pt-2">
+                <LoginForm initialValues={initialLoginValues} />
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <p className="text-sm font-medium text-primary">Bine ai revenit</p>
-              <h2 className="text-2xl font-semibold tracking-normal text-foreground">
-                Autentificare
-              </h2>
-              <p className="text-sm leading-6 text-muted-foreground">
-                Folosește contul clinicii pentru a accesa spațiul de
-                documentație medicală.
-              </p>
-            </CardHeader>
-            <CardContent>
-              <LoginForm initialValues={initialLoginValues} />
-            </CardContent>
-          </Card>
-
-          <p className="mt-6 text-center text-sm leading-6 text-muted-foreground">
-            Ai nevoie de acces pentru clinică?{" "}
-            <a
-              href="mailto:support@scribemed.ai"
-              className="font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              Contactează suportul
-            </a>
-            .
-          </p>
-        </section>
+            <p className="mx-auto mt-5 max-w-md text-center text-sm leading-6 text-muted-foreground">
+              Ai nevoie de acces pentru clinică?{" "}
+              <a
+                href="mailto:support@scribemed.ai"
+                className="font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                Contactează suportul
+              </a>
+              .
+            </p>
+          </section>
+        </div>
       </div>
     </main>
   );
