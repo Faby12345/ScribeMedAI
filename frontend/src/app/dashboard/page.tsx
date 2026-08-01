@@ -11,5 +11,9 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  return <DashboardShell user={user} />;
+  return (
+      <div>
+        <DashboardShell user={user} />
+      </div>
+  );
 }

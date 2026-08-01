@@ -2,6 +2,7 @@ package ro.scribemed.backend.patient.application;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.security.access.AccessDeniedException;
@@ -11,6 +12,7 @@ import ro.scribemed.backend.audit.application.AuditService;
 import ro.scribemed.backend.identity.domain.AppUser;
 import ro.scribemed.backend.identity.infrastructure.AppUserRepository;
 import ro.scribemed.backend.patient.domain.Patient;
+import ro.scribemed.backend.patient.domain.PatientStatus;
 import ro.scribemed.backend.patient.infrastructure.PatientRepository;
 import ro.scribemed.backend.tenancy.domain.Tenant;
 import ro.scribemed.backend.tenancy.infrastructure.TenantRepository;
@@ -62,6 +64,11 @@ public class PatientService {
         );
 
         return PatientResponse.from(patient);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PatientResponse> getAllPatients(UUID tenantId) {
+        return patientRepository.findActiveResponsesByTenantId(tenantId);
     }
 
 
