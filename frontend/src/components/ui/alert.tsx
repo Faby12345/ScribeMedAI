@@ -11,10 +11,10 @@ type AlertProps = HTMLAttributes<HTMLDivElement> & {
 };
 
 const variantClasses: Record<AlertVariant, string> = {
-  info: "border-primary/25 bg-primary-soft text-foreground",
-  error: "border-destructive/30 bg-destructive-soft text-foreground",
-  success: "border-success/30 bg-success-soft text-foreground",
-  warning: "border-warning/35 bg-warning-soft text-foreground",
+  info: "border-info/25 bg-info-soft",
+  error: "border-destructive/30 bg-destructive-soft",
+  success: "border-success/30 bg-success-soft",
+  warning: "border-warning/35 bg-warning-soft",
 };
 
 export function Alert({
@@ -27,7 +27,7 @@ export function Alert({
   return (
     <div
       className={cn(
-        "rounded-md border px-4 py-3 text-sm leading-6",
+        "rounded-[var(--radius-control)] border px-4 py-3 text-sm leading-6",
         variantClasses[variant],
         className,
       )}

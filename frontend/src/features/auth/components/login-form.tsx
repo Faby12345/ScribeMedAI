@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useId, useState } from "react";
+import { type FormEvent, useId, useState } from "react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,7 @@ export function LoginForm({ initialValues }: LoginFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (isSubmitting) {
@@ -86,7 +86,12 @@ export function LoginForm({ initialValues }: LoginFormProps) {
         </Alert>
       ) : null}
 
-      <FormField id={emailId} label="Adresă de email" error={errors.email}>
+      <FormField
+        id={emailId}
+        label="Adresă de email"
+        error={errors.email}
+        required
+      >
         <Input
           id={emailId}
           name="email"
@@ -101,7 +106,7 @@ export function LoginForm({ initialValues }: LoginFormProps) {
         />
       </FormField>
 
-      <FormField id={passwordId} label="Parolă" error={errors.password}>
+      <FormField id={passwordId} label="Parolă" error={errors.password} required>
         <Input
           id={passwordId}
           name="password"
@@ -115,7 +120,7 @@ export function LoginForm({ initialValues }: LoginFormProps) {
           trailingIcon={
             <button
               type="button"
-              className="rounded px-2 py-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="rounded-[calc(var(--radius-control)-0.125rem)] px-2 py-1 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               onClick={() => setShowPassword((current) => !current)}
               aria-label={showPassword ? "Ascunde parola" : "Afișează parola"}
               aria-pressed={showPassword}
@@ -127,7 +132,7 @@ export function LoginForm({ initialValues }: LoginFormProps) {
         />
       </FormField>
 
-      <div className="flex items-center justify-between gap-4 text-sm">
+      <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
         <span className="text-muted-foreground">
           Sesiune securizată prin cookie.
         </span>

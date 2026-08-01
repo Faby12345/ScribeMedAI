@@ -1,7 +1,15 @@
-export default function DashboardPage() {
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-6">
-      <h1 className="text-3xl font-semibold text-foreground">Dashboard</h1>
-    </main>
-  );
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+
+import { getCurrentUser } from "@/features/auth/api/current-user";
+import { DashboardShell } from "@/features/dashboard/components/dashboard-shell";
+
+export default async function DashboardPage() {
+  const user = await getCurrentUser(await cookies());
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  return <DashboardShell user={user} />;
 }
