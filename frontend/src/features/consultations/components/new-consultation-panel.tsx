@@ -12,6 +12,7 @@ import type { Patient } from "@/features/patients/types";
 type NewConsultationPanelProps = {
   isOpen: boolean;
   onClose: () => void;
+  onPatientCreated?: (patient: Patient) => void;
 };
 
 type PanelStep = "search" | "create" | "created";
@@ -19,6 +20,7 @@ type PanelStep = "search" | "create" | "created";
 export function NewConsultationPanel({
   isOpen,
   onClose,
+  onPatientCreated,
 }: NewConsultationPanelProps) {
   const [step, setStep] = useState<PanelStep>("search");
   const [searchTerm, setSearchTerm] = useState("");
@@ -37,6 +39,7 @@ export function NewConsultationPanel({
 
   function handleCreated(patient: Patient) {
     setSelectedPatient(patient);
+    onPatientCreated?.(patient);
     setStep("created");
   }
 

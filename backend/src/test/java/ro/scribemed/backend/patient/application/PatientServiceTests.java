@@ -7,10 +7,13 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -107,5 +110,47 @@ class PatientServiceTests {
 
         assertThatThrownBy(() -> patientService.createPatient(command))
                 .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void getAllPatientsReturnsRepositoryProjectionForTenant() {
+        UUID tenantId = UUID.randomUUID();
+
+        PatientResponse patient = new PatientResponse(
+                UUID.randomUUID(),
+                tenantId,
+                "Ana",
+                "Ionescu",
+                LocalDate.of(1985, 3, 20),
+                PatientSex.FEMALE,
+                "0712345678",
+                "ana@example.com",
+                ro.scribemed.backend.patient.domain.PatientStatus.ACTIVE,
+                java.time.Instant.now(),
+                java.time.Instant.now()
+        );
+
+        when(patientRepository.findActiveResponsesByTenantId(tenantId))
+                .thenReturn(List.of(patient));
+
+        List<PatientResponse> result = patientService.getAllPatients(tenantId);
+
+        assertThat(result).containsExactly(patient);
+        verify(patientRepository).findActiveResponsesByTenantId(tenantId);
+    }
+    @Test
+    void getAllPatientsDoesNotUseUnsafeEntityListLookup() {
+        UUID tenantId = UUID.randomUUID();
+
+        when(patientRepository.findActiveResponsesByTenantId(tenantId))
+                .thenReturn(List.of());
+
+        List<PatientResponse> result = patientService.getAllPatients(tenantId);
+
+        assertThat(result).isEmpty();
+        verify(patientRepository).findActiveResponsesByTenantId(tenantId);
+        verify(patientRepository, never())
+                .findByTenant_IdAndStatusOrderByLastNameAscFirstNameAsc(any(),
+                        any());
     }
 }

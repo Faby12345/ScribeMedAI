@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { LogoutButton } from "@/features/auth/components/logout-button";
 import type { AuthenticatedUser } from "@/features/auth/types";
 import { NewConsultationPanel } from "@/features/consultations/components/new-consultation-panel";
+import { PatientList } from "@/features/patients/components/patient-list";
 import { cn } from "@/lib/class-names";
 
 type DashboardShellProps = {
@@ -23,6 +24,7 @@ const navigationItems = [
 
 export function DashboardShell({ user }: DashboardShellProps) {
   const [isNewConsultationOpen, setIsNewConsultationOpen] = useState(false);
+  const [patientsRefreshKey, setPatientsRefreshKey] = useState(0);
 
   return (
     <main className="min-h-screen bg-background">
@@ -134,17 +136,10 @@ export function DashboardShell({ user }: DashboardShellProps) {
                   </div>
                 </div>
 
-                <Card variant="muted" className="p-6">
-                  <div className="max-w-xl">
-                    <p className="text-sm font-medium text-foreground">
-                      Modulul de pacienți nu este încă disponibil.
-                    </p>
-                    <p className="secondary-text mt-2">
-                      Următorul pas recomandat este API-ul pentru pacienți,
-                      căutarea după nume și formularul de adăugare pacient.
-                    </p>
-                  </div>
-                </Card>
+                <PatientList
+                  refreshKey={patientsRefreshKey}
+                  onCreatePatient={() => setIsNewConsultationOpen(true)}
+                />
               </section>
 
               <aside className="space-y-6">
@@ -183,6 +178,9 @@ export function DashboardShell({ user }: DashboardShellProps) {
       <NewConsultationPanel
         isOpen={isNewConsultationOpen}
         onClose={() => setIsNewConsultationOpen(false)}
+        onPatientCreated={() =>
+          setPatientsRefreshKey((current) => current + 1)
+        }
       />
     </main>
   );

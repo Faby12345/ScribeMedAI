@@ -1,14 +1,12 @@
 package ro.scribemed.backend.patient.api;
 
 import java.net.URI;
+import java.util.List;
 
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import ro.scribemed.backend.identity.security.CurrentUser;
 import ro.scribemed.backend.patient.application.CreatePatientCommand;
 import ro.scribemed.backend.patient.application.PatientResponse;
@@ -43,5 +41,12 @@ public class PatientController {
         return ResponseEntity
                 .created(URI.create("/api/v1/patients/" + response.id()))
                 .body(response);
+    }
+    @GetMapping
+    public ResponseEntity<List<PatientResponse>> getAllPatients(
+            @AuthenticationPrincipal CurrentUser currentUser
+    ){
+        return
+                ResponseEntity.ok(patientService.getAllPatients(currentUser.tenantId()));
     }
 }
