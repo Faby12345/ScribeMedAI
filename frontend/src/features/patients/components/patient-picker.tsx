@@ -13,9 +13,9 @@ import {
 } from "@/features/patients/api/get-patients";
 import type { Patient, PatientSex } from "@/features/patients/types";
 
-type PatientListProps = {
-  refreshKey?: number;
-  onCreatePatient?: () => void;
+type PatientPickerProps = {
+  onSelectPatient: (patient: Patient) => void;
+  onCreatePatient: () => void;
 };
 
 const sexLabels: Record<PatientSex, string> = {
@@ -25,7 +25,10 @@ const sexLabels: Record<PatientSex, string> = {
   UNKNOWN: "Necunoscut",
 };
 
-export function PatientList({ refreshKey, onCreatePatient }: PatientListProps) {
+export default function PatientPicker({
+  onSelectPatient,
+  onCreatePatient,
+}: PatientPickerProps) {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [query, setQuery] = useState("");
   const [retryKey, setRetryKey] = useState(0);
@@ -67,7 +70,7 @@ export function PatientList({ refreshKey, onCreatePatient }: PatientListProps) {
     return () => {
       isActive = false;
     };
-  }, [refreshKey, retryKey]);
+  }, [retryKey]);
 
   const visiblePatients = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase("ro-RO");
@@ -124,42 +127,35 @@ export function PatientList({ refreshKey, onCreatePatient }: PatientListProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <label className="min-w-0 flex-1 space-y-2">
-          <span className="text-sm font-medium text-foreground">
-            Caută pacient
-          </span>
-          <Input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Nume, telefon sau email"
-            aria-label="Caută pacient în lista încărcată"
-          />
-        </label>
-        <Button type="button" variant="outline" onClick={onCreatePatient}>
-          Adaugă pacient
-        </Button>
-      </div>
+      <label className="block space-y-2">
+        <span className="text-sm font-medium text-foreground">
+          Caută pacient
+        </span>
+        <Input
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Nume, telefon sau email"
+          aria-label="Caută pacient în lista încărcată"
+        />
+      </label>
 
       {patients.length === 0 ? (
-        <Card variant="muted" className="p-6">
-          <div className="max-w-xl">
-            <p className="text-sm font-medium text-foreground">
-              Nu există pacienți încă.
-            </p>
-            <p className="secondary-text mt-2">
-              Adaugă primul pacient din fluxul de consultație nouă.
-            </p>
-            <Button
-              type="button"
-              variant="primary"
-              className="mt-4"
-              onClick={onCreatePatient}
-            >
-              Consultație nouă
-            </Button>
-          </div>
+        <Card variant="muted" className="p-5">
+          <p className="text-sm font-medium text-foreground">
+            Nu există pacienți încă.
+          </p>
+          <p className="secondary-text mt-2">
+            Adaugă primul pacient pentru a începe consultația.
+          </p>
+          <Button
+            type="button"
+            variant="primary"
+            className="mt-4"
+            onClick={onCreatePatient}
+          >
+            Adaugă pacient
+          </Button>
         </Card>
       ) : null}
 
@@ -178,7 +174,11 @@ export function PatientList({ refreshKey, onCreatePatient }: PatientListProps) {
         <div className="overflow-hidden rounded-[var(--radius-surface)] border border-border bg-surface shadow-surface">
           <ul className="divide-y divide-border">
             {visiblePatients.map((patient) => (
-              <PatientListItem key={patient.id} patient={patient} />
+              <PatientPickerItem
+                key={patient.id}
+                patient={patient}
+                onSelectPatient={onSelectPatient}
+              />
             ))}
           </ul>
         </div>
@@ -187,7 +187,13 @@ export function PatientList({ refreshKey, onCreatePatient }: PatientListProps) {
   );
 }
 
-export default function PatientListItem({ patient }: { patient: Patient }) {
+function PatientPickerItem({
+  patient,
+  onSelectPatient,
+}: {
+  patient: Patient;
+  onSelectPatient: (patient: Patient) => void;
+}) {
   return (
     <li className="grid gap-3 px-4 py-4 transition-colors hover:bg-surface-muted sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
       <div className="min-w-0">
@@ -209,8 +215,13 @@ export default function PatientListItem({ patient }: { patient: Patient }) {
           <PatientMeta label="Email" value={patient.email} />
         </dl>
       </div>
-      <Button type="button" variant="outline" size="sm" disabled>
-        Detalii
+      <Button
+        type="button"
+        variant="primary"
+        size="sm"
+        onClick={() => onSelectPatient(patient)}
+      >
+        Începe consultația
       </Button>
     </li>
   );

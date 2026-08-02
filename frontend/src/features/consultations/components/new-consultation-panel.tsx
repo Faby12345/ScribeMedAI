@@ -5,8 +5,8 @@ import { useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { CreatePatientForm } from "@/features/patients/components/create-patient-form";
+import PatientPicker from "@/features/patients/components/patient-picker";
 import type { Patient } from "@/features/patients/types";
 
 type NewConsultationPanelProps = {
@@ -23,7 +23,6 @@ export function NewConsultationPanel({
   onPatientCreated,
 }: NewConsultationPanelProps) {
   const [step, setStep] = useState<PanelStep>("search");
-  const [searchTerm, setSearchTerm] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
 
   if (!isOpen) {
@@ -32,7 +31,6 @@ export function NewConsultationPanel({
 
   function handleClose() {
     setStep("search");
-    setSearchTerm("");
     setSelectedPatient(null);
     onClose();
   }
@@ -40,6 +38,11 @@ export function NewConsultationPanel({
   function handleCreated(patient: Patient) {
     setSelectedPatient(patient);
     onPatientCreated?.(patient);
+    setStep("created");
+  }
+
+  function handleSelectPatient(patient: Patient) {
+    setSelectedPatient(patient);
     setStep("created");
   }
 
@@ -86,9 +89,8 @@ export function NewConsultationPanel({
 
         {step === "search" ? (
           <SearchPatientStep
-            searchTerm={searchTerm}
-            onSearchTermChange={setSearchTerm}
             onCreatePatient={() => setStep("create")}
+            onSelectPatient={handleSelectPatient}
           />
         ) : null}
 
@@ -108,13 +110,11 @@ export function NewConsultationPanel({
 }
 
 function SearchPatientStep({
-  searchTerm,
-  onSearchTermChange,
   onCreatePatient,
+  onSelectPatient,
 }: {
-  searchTerm: string;
-  onSearchTermChange: (value: string) => void;
   onCreatePatient: () => void;
+  onSelectPatient: (patient: Patient) => void;
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -130,39 +130,14 @@ function SearchPatientStep({
               </p>
             </div>
 
-            <label className="space-y-2">
-              <span className="text-sm font-medium text-foreground">
-                Caută pacient
-              </span>
-              <Input
-                type="search"
-                value={searchTerm}
-                onChange={(event) => onSearchTermChange(event.target.value)}
-                placeholder="Nume, telefon sau email"
-                aria-label="Caută pacient după nume, telefon sau email"
-              />
-            </label>
+            <PatientPicker
+              onSelectPatient={onSelectPatient}
+              onCreatePatient={onCreatePatient}
+            />
           </section>
-
-          <div className="rounded-[var(--radius-control)] border border-dashed border-border bg-surface-muted p-5">
-            <p className="text-sm font-medium text-foreground">
-              Căutarea pacienților va fi conectată în pasul următor.
-            </p>
-            <p className="secondary-text mt-2">
-              Pentru moment poți adăuga un pacient nou și îl vom selecta pentru
-              această consultație.
-            </p>
-            <Button
-              type="button"
-              variant="primary"
-              className="mt-4"
-              onClick={onCreatePatient}
-            >
-              Adaugă pacient nou
-            </Button>
-          </div>
         </div>
       </div>
+
 
       <div className="border-t border-border bg-surface px-5 py-4 sm:px-6">
         <div className="flex justify-end">
