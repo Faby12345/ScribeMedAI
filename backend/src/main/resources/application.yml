@@ -16,6 +16,11 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+  servlet:
+    multipart:
+      max-file-size: ${SCRIBEMED_AUDIO_MAX_FILE_SIZE:25MB}
+      max-request-size: ${SCRIBEMED_AUDIO_MAX_REQUEST_SIZE:25MB}
+
 management:
   endpoints:
     web:
@@ -49,3 +54,21 @@ scribemed:
       doctor-email: ${SCRIBEMED_DEV_DOCTOR_EMAIL:}
       doctor-password: ${SCRIBEMED_DEV_DOCTOR_PASSWORD:}
       doctor-display-name: ${SCRIBEMED_DEV_DOCTOR_DISPLAY_NAME:Dr. Demo}
+
+  audio:
+    local-storage-dir: ${SCRIBEMED_AUDIO_LOCAL_STORAGE_DIR:./var/audio}
+    max-size-bytes: ${SCRIBEMED_AUDIO_MAX_SIZE_BYTES:26214400}
+
+  processing:
+    worker:
+      enabled: ${SCRIBEMED_PROCESSING_WORKER_ENABLED:true}
+      poll-delay-ms: ${SCRIBEMED_PROCESSING_WORKER_POLL_DELAY_MS:5000}
+
+  transcription:
+    provider: deepgram
+    deepgram:
+      api-key: ${DEEPGRAM_API_KEY:}
+      base-url: ${DEEPGRAM_BASE_URL:https://api.deepgram.com}
+      model: ${DEEPGRAM_MODEL:nova-3}
+      language: ${DEEPGRAM_LANGUAGE:ro}
+      smart-format: ${DEEPGRAM_SMART_FORMAT:true}
