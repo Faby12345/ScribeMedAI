@@ -36,4 +36,8 @@ public interface PatientRepository extends JpaRepository<Patient, UUID> {
       order by p.lastName asc, p.firstName asc
   """)
     List<PatientResponse> findActiveResponsesByTenantId(UUID tenantId);
+
+    Patient findPatientById(UUID id);
+
+    Optional<Patient> findPatientByIdAndTenantId(UUID id, UUID tenantId);
 }

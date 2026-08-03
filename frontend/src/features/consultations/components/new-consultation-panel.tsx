@@ -44,6 +44,7 @@ export function NewConsultationPanel({
   function handleSelectPatient(patient: Patient) {
     setSelectedPatient(patient);
     setStep("created");
+
   }
 
   return (

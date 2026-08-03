@@ -2,6 +2,7 @@ package ro.scribemed.backend.patient.api;
 
 import java.net.URI;
 import java.util.List;
+import java.util.UUID;
 
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -48,5 +49,13 @@ public class PatientController {
     ){
         return
                 ResponseEntity.ok(patientService.getAllPatients(currentUser.tenantId()));
+    }
+
+    @GetMapping("/{patientId}")
+    public ResponseEntity<PatientResponse> getPatient(
+            @AuthenticationPrincipal CurrentUser currentUser,
+            @PathVariable UUID patientId
+    ){
+        return  ResponseEntity.ok(patientService.getPatient(currentUser.tenantId(), patientId));
     }
 }
