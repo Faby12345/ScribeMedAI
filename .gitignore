@@ -62,7 +62,7 @@ temp/
 
 # Generated medical/audio/document artifacts for local development
 uploads/
-audio/
+/audio/
 recordings/
 exports/
 generated/
