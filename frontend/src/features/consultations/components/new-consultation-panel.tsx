@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Alert } from "@/components/ui/alert";
@@ -21,6 +21,7 @@ type NewConsultationPanelProps = {
 };
 
 type PanelStep = "search" | "create";
+const panelExitDurationMs = 180;
 
 export function NewConsultationPanel({
   isOpen,
@@ -28,12 +29,37 @@ export function NewConsultationPanel({
   onPatientCreated,
 }: NewConsultationPanelProps) {
   const router = useRouter();
+  const [shouldRender, setShouldRender] = useState(isOpen);
+  const [isClosing, setIsClosing] = useState(false);
   const [step, setStep] = useState<PanelStep>("search");
   const [pendingPatient, setPendingPatient] = useState<Patient | null>(null);
   const [isCreatingConsultation, setIsCreatingConsultation] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  if (!isOpen) {
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+      setIsClosing(false);
+      return;
+    }
+
+    if (!shouldRender) {
+      return;
+    }
+
+    setIsClosing(true);
+    const timeoutId = window.setTimeout(() => {
+      setShouldRender(false);
+      setIsClosing(false);
+      setStep("search");
+      setPendingPatient(null);
+      setSubmitError(null);
+    }, panelExitDurationMs);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [isOpen, shouldRender]);
+
+  if (!shouldRender) {
     return null;
   }
 
@@ -42,9 +68,6 @@ export function NewConsultationPanel({
       return;
     }
 
-    setStep("search");
-    setPendingPatient(null);
-    setSubmitError(null);
     onClose();
   }
 
@@ -86,7 +109,9 @@ export function NewConsultationPanel({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-foreground/35"
+      className={`fixed inset-0 z-50 bg-foreground/35 ${
+        isClosing ? "panel-overlay-exit" : "panel-overlay-enter"
+      }`}
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
@@ -95,7 +120,9 @@ export function NewConsultationPanel({
       }}
     >
       <aside
-        className="ml-auto flex h-full w-full max-w-2xl flex-col border-l border-border bg-surface shadow-elevated"
+        className={`ml-auto flex h-full w-full max-w-2xl flex-col border-l border-border bg-surface shadow-elevated ${
+          isClosing ? "side-panel-exit" : "side-panel-enter"
+        }`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="new-consultation-title"
