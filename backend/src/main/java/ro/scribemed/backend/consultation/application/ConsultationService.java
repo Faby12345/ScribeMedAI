@@ -2,6 +2,7 @@ package ro.scribemed.backend.consultation.application;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -221,6 +222,10 @@ public class ConsultationService {
             return ".audio";
         }
         return originalFilename.substring(dotIndex).replaceAll("[^A-Za-z0-9.]", "");
+    }
+
+    private List<ConsultationResponse> getAllConsultations() {
+
     }
 
 }

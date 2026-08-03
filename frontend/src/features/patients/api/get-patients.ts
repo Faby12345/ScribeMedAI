@@ -42,11 +42,11 @@ export async function getPatients(): Promise<Patient[]> {
   return response.json();
 }
 
-export async function  getPatient(id: string) : Promise<Patient> {
+export async function getPatient(id: string): Promise<Patient> {
   let response: Response;
 
   try {
-    response = await fetch(`api/v1/patients/${id}`, {
+    response = await fetch(`/api/v1/patients/${id}`, {
       method: "GET",
       credentials: "include",
       cache: "no-store",

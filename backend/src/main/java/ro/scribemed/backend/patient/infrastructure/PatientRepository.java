@@ -39,5 +39,7 @@ public interface PatientRepository extends JpaRepository<Patient, UUID> {
 
     Patient findPatientById(UUID id);
 
+    boolean existsByTenant_IdAndEmailIgnoreCase(UUID tenantId, String email);
+
     Optional<Patient> findPatientByIdAndTenantId(UUID id, UUID tenantId);
 }

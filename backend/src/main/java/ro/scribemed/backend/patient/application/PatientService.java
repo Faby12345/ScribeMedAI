@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -43,6 +44,10 @@ public class PatientService {
                 .orElseThrow(() -> new EntityNotFoundException("Tenant not found"));
         AppUser actorUser = appUserRepository.findByIdAndTenant_Id(command.actorUserId(), command.tenantId())
                 .orElseThrow(() -> new AccessDeniedException("Actor user is not part of the tenant"));
+
+        if(patientRepository.existsByTenant_IdAndEmailIgnoreCase(command.tenantId(), command.email())){
+            throw new EntityExistsException("Email already use with another account!");
+        }
 
         Patient patient = patientRepository.save(new Patient(
                 tenant,
