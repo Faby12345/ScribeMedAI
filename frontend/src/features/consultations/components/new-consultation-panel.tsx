@@ -1,10 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  CreateConsultationApiError,
+  createConsultation,
+} from "@/features/consultations/api/create-consultation";
 import { CreatePatientForm } from "@/features/patients/components/create-patient-form";
 import PatientPicker from "@/features/patients/components/patient-picker";
 import type { Patient } from "@/features/patients/types";
@@ -15,36 +20,68 @@ type NewConsultationPanelProps = {
   onPatientCreated?: (patient: Patient) => void;
 };
 
-type PanelStep = "search" | "create" | "created";
+type PanelStep = "search" | "create";
 
 export function NewConsultationPanel({
   isOpen,
   onClose,
   onPatientCreated,
 }: NewConsultationPanelProps) {
+  const router = useRouter();
   const [step, setStep] = useState<PanelStep>("search");
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [pendingPatient, setPendingPatient] = useState<Patient | null>(null);
+  const [isCreatingConsultation, setIsCreatingConsultation] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   if (!isOpen) {
     return null;
   }
 
   function handleClose() {
+    if (isCreatingConsultation) {
+      return;
+    }
+
     setStep("search");
-    setSelectedPatient(null);
+    setPendingPatient(null);
+    setSubmitError(null);
     onClose();
   }
 
   function handleCreated(patient: Patient) {
-    setSelectedPatient(patient);
     onPatientCreated?.(patient);
-    setStep("created");
+    setStep("search");
+    setPendingPatient(patient);
+    setSubmitError(null);
   }
 
   function handleSelectPatient(patient: Patient) {
-    setSelectedPatient(patient);
-    setStep("created");
+    setPendingPatient(patient);
+    setSubmitError(null);
+  }
 
+  async function startConsultation() {
+    if (!pendingPatient || isCreatingConsultation) {
+      return;
+    }
+
+    setSubmitError(null);
+    setIsCreatingConsultation(true);
+
+    try {
+      const consultation = await createConsultation(pendingPatient.id);
+      router.push(`/consultations/${consultation.id}`);
+      router.refresh();
+    } catch (error) {
+      if (error instanceof CreateConsultationApiError) {
+        setSubmitError(error.message);
+      } else {
+        setSubmitError(
+          "Consultația nu a putut fi creată. Încearcă din nou.",
+        );
+      }
+      setIsCreatingConsultation(false);
+    }
   }
 
   return (
@@ -66,8 +103,8 @@ export function NewConsultationPanel({
         <header className="border-b border-border px-5 py-4 sm:px-6">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <Badge variant={step === "created" ? "success" : "info"}>
-                {step === "created" ? "Pacient selectat" : "În pregătire"}
+              <Badge variant={isCreatingConsultation ? "processing" : "info"}>
+                {isCreatingConsultation ? "Se creează" : "În pregătire"}
               </Badge>
               <h2 id="new-consultation-title" className="mt-3 text-xl font-semibold text-foreground">
                 Consultație nouă
@@ -81,6 +118,7 @@ export function NewConsultationPanel({
               variant="ghost"
               size="sm"
               onClick={handleClose}
+              disabled={isCreatingConsultation}
               aria-label="Închide panoul pentru consultație nouă"
             >
               Închide
@@ -88,10 +126,19 @@ export function NewConsultationPanel({
           </div>
         </header>
 
+        {submitError ? (
+          <div className="border-b border-border px-5 py-4 sm:px-6">
+            <Alert variant="error" title="Consultația nu a fost creată">
+              {submitError}
+            </Alert>
+          </div>
+        ) : null}
+
         {step === "search" ? (
           <SearchPatientStep
             onCreatePatient={() => setStep("create")}
             onSelectPatient={handleSelectPatient}
+            isCreatingConsultation={isCreatingConsultation}
           />
         ) : null}
 
@@ -102,8 +149,13 @@ export function NewConsultationPanel({
           />
         ) : null}
 
-        {step === "created" && selectedPatient ? (
-          <CreatedPatientStep patient={selectedPatient} onClose={handleClose} />
+        {pendingPatient ? (
+          <ConfirmConsultationDialog
+            patient={pendingPatient}
+            isCreating={isCreatingConsultation}
+            onCancel={() => setPendingPatient(null)}
+            onConfirm={() => void startConsultation()}
+          />
         ) : null}
       </aside>
     </div>
@@ -113,9 +165,11 @@ export function NewConsultationPanel({
 function SearchPatientStep({
   onCreatePatient,
   onSelectPatient,
+  isCreatingConsultation,
 }: {
   onCreatePatient: () => void;
   onSelectPatient: (patient: Patient) => void;
+  isCreatingConsultation: boolean;
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -142,7 +196,12 @@ function SearchPatientStep({
 
       <div className="border-t border-border bg-surface px-5 py-4 sm:px-6">
         <div className="flex justify-end">
-          <Button type="button" variant="outline" onClick={onCreatePatient}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCreatePatient}
+            disabled={isCreatingConsultation}
+          >
             Continuă cu pacient nou
           </Button>
         </div>
@@ -151,69 +210,84 @@ function SearchPatientStep({
   );
 }
 
-function CreatedPatientStep({
+function ConfirmConsultationDialog({
   patient,
-  onClose,
+  isCreating,
+  onCancel,
+  onConfirm,
 }: {
   patient: Patient;
-  onClose: () => void;
+  isCreating: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
 }) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
-        <Alert variant="success" title="Pacient adăugat">
-          Pacientul este pregătit pentru consultație. Crearea consultației va fi
-          conectată după ce endpointul dedicat este disponibil.
-        </Alert>
+    <div
+      className="absolute inset-0 z-10 flex items-center justify-center bg-foreground/30 px-4"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !isCreating) {
+          onCancel();
+        }
+      }}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-consultation-title"
+        className="w-full max-w-md rounded-[var(--radius-surface)] border border-border bg-surface p-5 shadow-elevated"
+      >
+        <Badge variant="warning">Confirmare necesară</Badge>
+        <h3
+          id="confirm-consultation-title"
+          className="mt-3 text-lg font-semibold text-foreground"
+        >
+          Creezi o consultație nouă?
+        </h3>
+        <p className="secondary-text mt-2">
+          Verifică pacientul selectat înainte de a deschide fișa consultației.
+        </p>
 
-        <section className="mt-5" aria-labelledby="selected-patient-title">
-          <h3 id="selected-patient-title" className="section-title">
-            Pacient selectat
-          </h3>
-          <div className="mt-3 rounded-[var(--radius-control)] border border-border bg-surface-muted p-4">
-            <p className="text-base font-semibold text-foreground">
-              {patient.firstName} {patient.lastName}
-            </p>
-            <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
-              <div>
-                <dt className="caption-text">Data nașterii</dt>
-                <dd className="mt-1 text-foreground">
-                  {patient.birthDate || "Nespecificată"}
-                </dd>
-              </div>
-              <div>
-                <dt className="caption-text">Status</dt>
-                <dd className="mt-1">
-                  <Badge variant="success">Activ</Badge>
-                </dd>
-              </div>
-              <div>
-                <dt className="caption-text">Telefon</dt>
-                <dd className="mt-1 text-foreground">
-                  {patient.phone || "Nespecificat"}
-                </dd>
-              </div>
-              <div>
-                <dt className="caption-text">Email</dt>
-                <dd className="mt-1 text-foreground">
-                  {patient.email || "Nespecificat"}
-                </dd>
-              </div>
-            </dl>
-          </div>
-        </section>
-      </div>
+        <div className="mt-4 rounded-[var(--radius-control)] border border-border bg-surface-muted p-4">
+          <p className="text-sm font-semibold text-foreground">
+            {patient.lastName} {patient.firstName}
+          </p>
+          <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="caption-text">Data nașterii</dt>
+              <dd className="mt-1 text-foreground">
+                {patient.birthDate || "Nespecificată"}
+              </dd>
+            </div>
+            <div>
+              <dt className="caption-text">Telefon</dt>
+              <dd className="mt-1 text-foreground">
+                {patient.phone || "Nespecificat"}
+              </dd>
+            </div>
+          </dl>
+        </div>
 
-      <div className="border-t border-border bg-surface px-5 py-4 sm:px-6">
-        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button type="button" variant="outline" onClick={onClose}>
-            Închide
+        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            disabled={isCreating}
+          >
+            Anulează
           </Button>
-          <Button type="button" variant="primary" disabled>
-            Continuă la consultație
+          <Button
+            type="button"
+            variant="primary"
+            onClick={onConfirm}
+            isLoading={isCreating}
+            loadingText="Se creează"
+          >
+            Creează consultația
           </Button>
         </div>
-      </div>
+      </section>
     </div>
   );
 }
