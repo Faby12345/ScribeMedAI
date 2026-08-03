@@ -71,6 +71,19 @@ public class PatientService {
         return patientRepository.findActiveResponsesByTenantId(tenantId);
     }
 
+    @Transactional(readOnly = true)
+    public PatientResponse getPatient(UUID tenantId, UUID patientId) {
+        Tenant tenant = tenantRepository.findById(tenantId)
+                .orElseThrow(() -> new EntityNotFoundException("Tenant not found!"));
+
+        Patient patient = patientRepository.findPatientByIdAndTenantId(patientId, tenantId)
+                .orElseThrow(() ->
+                    new EntityNotFoundException("Patient not found!")
+                );
+
+        return PatientResponse.from(patient);
+    }
+
 
 
     private String normalizeRequired(String value) {

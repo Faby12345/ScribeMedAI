@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.security.access.AccessDeniedException;
@@ -152,5 +153,48 @@ class PatientServiceTests {
         verify(patientRepository, never())
                 .findByTenant_IdAndStatusOrderByLastNameAscFirstNameAsc(any(),
                         any());
+    }
+
+    @Test
+    void getPatientReturnsTenantScopedPatien() {
+        UUID patientId = UUID.randomUUID();
+        UUID tenantId = UUID.randomUUID();
+
+        Tenant tenant = new Tenant("Demo Clinic", TenantStatus.ACTIVE);
+        Patient patient = new Patient(
+                tenant,
+                "Ana",
+                "Ionescu",
+                LocalDate.of(1985, 3, 20),
+                PatientSex.FEMALE,
+                "0712345678",
+                "ana@example.com"
+        );
+
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
+        when(patientRepository.findPatientByIdAndTenantId(patientId, tenantId))
+                .thenReturn(Optional.of(patient));
+
+        PatientResponse result = patientService.getPatient(tenantId, patientId);
+
+        assertThat(result.firstName()).isEqualTo("Ana");
+        assertThat(result.lastName()).isEqualTo("Ionescu");
+        verify(patientRepository).findPatientByIdAndTenantId(patientId, tenantId);
+    }
+
+    @Test
+    void getPatientThrowsWhenPatientIsNotInTenant() {
+        UUID tenantId = UUID.randomUUID();
+        UUID patientId = UUID.randomUUID();
+        Tenant tenant = new Tenant("Demo Clinic", TenantStatus.ACTIVE);
+
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
+        when(patientRepository.findPatientByIdAndTenantId(patientId, tenantId))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> patientService.getPatient(tenantId, patientId))
+                .isInstanceOf(EntityNotFoundException.class);
+
+        verify(patientRepository).findPatientByIdAndTenantId(patientId, tenantId);
     }
 }
