@@ -16,10 +16,10 @@ type DashboardShellProps = {
 };
 
 const navigationItems = [
-  { label: "Panou principal", active: true },
-  { label: "Pacienți", active: false },
-  { label: "Consultații", active: false },
-  { label: "Documente", active: false },
+  { label: "Panou principal", href: "/dashboard", active: true },
+  { label: "Pacienți", href: "/dashboard", active: false },
+  { label: "Consultații", href: "/consultations", active: false },
+  { label: "Documente", href: "/dashboard", active: false },
 ];
 
 export function DashboardShell({ user }: DashboardShellProps) {
@@ -50,7 +50,7 @@ export function DashboardShell({ user }: DashboardShellProps) {
               {navigationItems.map((item) => (
                 <li key={item.label}>
                   <a
-                    href="#"
+                    href={item.href}
                     className={cn(
                       "flex h-10 items-center rounded-[var(--radius-control)] px-3 text-sm font-medium transition-colors",
                       item.active
