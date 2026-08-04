@@ -5,10 +5,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
+import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -16,6 +19,9 @@ import java.util.UUID;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.mock.web.MockMultipartFile;
 import ro.scribemed.backend.audio.application.AudioStorageService;
 import ro.scribemed.backend.audio.application.StoredAudio;
@@ -171,5 +177,33 @@ class ConsultationServiceTests {
         assertThat(consultation.getStatus()).isEqualTo(ConsultationStatus.AUDIO_UPLOADED);
         assertThat(jobCaptor.getValue().getJobType()).isEqualTo(ProcessingJobType.TRANSCRIPTION);
         assertThat(response.status()).isEqualTo(ConsultationStatus.AUDIO_UPLOADED);
+    }
+
+    @Test
+    void getAllConsultationsReturnsTenantScopedRepositoryProjection() {
+        UUID tenantId = UUID.randomUUID();
+        ConsultationResponse consultation = new ConsultationResponse(
+                UUID.randomUUID(),
+                tenantId,
+                UUID.randomUUID(),
+                "Ana",
+                "Ionescu",
+                UUID.randomUUID(),
+                ConsultationStatus.CREATED,
+                null,
+                Instant.now(),
+                Instant.now()
+        );
+
+        PageRequest pageable = PageRequest.of(0, 20);
+        when(consultationRepository.findResponsesByTenantId(tenantId, pageable))
+                .thenReturn(new PageImpl<>(List.of(consultation), pageable, 1));
+
+        Page<ConsultationResponse> result = consultationService.getAllConsultations(tenantId, pageable);
+
+        assertThat(result.getContent()).containsExactly(consultation);
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        verify(consultationRepository).findResponsesByTenantId(tenantId, pageable);
+        verify(consultationRepository, never()).findAll();
     }
 }
