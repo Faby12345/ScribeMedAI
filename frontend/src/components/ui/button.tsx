@@ -1,4 +1,10 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import Link from "next/link";
+import {
+  forwardRef,
+  type AnchorHTMLAttributes,
+  type ButtonHTMLAttributes,
+  type ReactNode,
+} from "react";
 
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/class-names";
@@ -21,8 +27,15 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   children: ReactNode;
 };
 
+type ButtonLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
+  href: string;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  children: ReactNode;
+};
+
 const baseClasses =
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-[var(--radius-control)] border font-medium tracking-normal transition-colors " +
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-[var(--radius-control)] border text-center font-medium leading-tight tracking-normal transition-colors " +
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background " +
   "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-55";
 
@@ -44,38 +57,68 @@ const variantClasses: Record<ButtonVariant, string> = {
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
-  sm: "h-9 px-3 text-sm",
-  md: "h-[var(--control-height)] px-4 text-sm",
-  lg: "h-12 px-5 text-base",
+  sm: "min-h-9 px-3 py-2 text-sm",
+  md: "min-h-[var(--control-height)] px-4 py-2 text-sm",
+  lg: "min-h-12 px-5 py-2.5 text-base",
   icon: "size-10 p-0",
 };
 
-export function Button({
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+  function Button(
+    {
+      variant = "primary",
+      size = "md",
+      isLoading = false,
+      loadingText,
+      disabled,
+      className,
+      children,
+      ...props
+    },
+    ref,
+  ) {
+    const isDisabled = disabled || isLoading;
+
+    return (
+      <button
+        ref={ref}
+        className={cn(
+          baseClasses,
+          variantClasses[variant],
+          sizeClasses[size],
+          className,
+        )}
+        disabled={isDisabled}
+        aria-busy={isLoading || undefined}
+        {...props}
+      >
+        {isLoading ? <Spinner /> : null}
+        {isLoading && loadingText ? loadingText : children}
+      </button>
+    );
+  },
+);
+
+export function ButtonLink({
+  href,
   variant = "primary",
   size = "md",
-  isLoading = false,
-  loadingText,
-  disabled,
   className,
   children,
   ...props
-}: ButtonProps) {
-  const isDisabled = disabled || isLoading;
-
+}: ButtonLinkProps) {
   return (
-    <button
+    <Link
+      href={href}
       className={cn(
         baseClasses,
         variantClasses[variant],
         sizeClasses[size],
         className,
       )}
-      disabled={isDisabled}
-      aria-busy={isLoading || undefined}
       {...props}
     >
-      {isLoading ? <Spinner /> : null}
-      {isLoading && loadingText ? loadingText : children}
-    </button>
+      {children}
+    </Link>
   );
 }

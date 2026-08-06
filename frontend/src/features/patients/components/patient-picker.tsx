@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -11,24 +11,20 @@ import {
   GetPatientsApiError,
   getPatients,
 } from "@/features/patients/api/get-patients";
-import type { Patient, PatientSex } from "@/features/patients/types";
+import type { Patient } from "@/features/patients/types";
 
 type PatientPickerProps = {
   onSelectPatient: (patient: Patient) => void;
   onCreatePatient: () => void;
-};
-
-const sexLabels: Record<PatientSex, string> = {
-  FEMALE: "Feminin",
-  MALE: "Masculin",
-  OTHER: "Altul",
-  UNKNOWN: "Necunoscut",
+  autoFocusSearch?: boolean;
 };
 
 export default function PatientPicker({
   onSelectPatient,
   onCreatePatient,
+  autoFocusSearch = false,
 }: PatientPickerProps) {
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [query, setQuery] = useState("");
   const [retryKey, setRetryKey] = useState(0);
@@ -71,6 +67,14 @@ export default function PatientPicker({
       isActive = false;
     };
   }, [retryKey]);
+
+  useEffect(() => {
+    if (!autoFocusSearch || isLoading || error) {
+      return;
+    }
+
+    searchInputRef.current?.focus();
+  }, [autoFocusSearch, error, isLoading]);
 
   const visiblePatients = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase("ro-RO");
@@ -132,6 +136,7 @@ export default function PatientPicker({
           Caută pacient
         </span>
         <Input
+          ref={searchInputRef}
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
@@ -194,6 +199,12 @@ function PatientPickerItem({
   patient: Patient;
   onSelectPatient: (patient: Patient) => void;
 }) {
+  const secondaryIdentifier = patient.phone
+    ? { label: "Telefon", value: patient.phone }
+    : patient.email
+      ? { label: "Email", value: patient.email }
+      : null;
+
   return (
     <li className="grid gap-3 px-4 py-4 transition-colors hover:bg-surface-muted sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
       <div className="min-w-0">
@@ -201,28 +212,34 @@ function PatientPickerItem({
           <p className="truncate text-sm font-semibold text-foreground">
             {patient.lastName} {patient.firstName}
           </p>
-          <Badge variant={patient.status === "ACTIVE" ? "success" : "neutral"}>
+          <Badge variant={patient.status === "ACTIVE" ? "info" : "neutral"}>
             {patient.status === "ACTIVE" ? "Activ" : "Arhivat"}
           </Badge>
         </div>
         <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
           <PatientMeta label="Data nașterii" value={patient.birthDate} />
-          <PatientMeta
-            label="Sex"
-            value={patient.sex ? sexLabels[patient.sex] : null}
-          />
-          <PatientMeta label="Telefon" value={patient.phone} />
-          <PatientMeta label="Email" value={patient.email} />
+          {secondaryIdentifier ? (
+            <PatientMeta
+              label={secondaryIdentifier.label}
+              value={secondaryIdentifier.value}
+            />
+          ) : null}
         </dl>
       </div>
-      <Button
-        type="button"
-        variant="primary"
-        size="sm"
-        onClick={() => onSelectPatient(patient)}
-      >
-        Începe consultația
-      </Button>
+      {patient.status === "ACTIVE" ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onSelectPatient(patient)}
+        >
+          Selectează pacientul
+        </Button>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          Pacient arhivat
+        </p>
+      )}
     </li>
   );
 }

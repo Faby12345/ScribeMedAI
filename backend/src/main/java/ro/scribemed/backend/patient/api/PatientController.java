@@ -47,8 +47,7 @@ public class PatientController {
     public ResponseEntity<List<PatientResponse>> getAllPatients(
             @AuthenticationPrincipal CurrentUser currentUser
     ){
-        return
-                ResponseEntity.ok(patientService.getAllPatients(currentUser.tenantId()));
+       return ResponseEntity.ok(patientService.getAllPatients(currentUser.tenantId()));
     }
 
     @GetMapping("/{patientId}")
