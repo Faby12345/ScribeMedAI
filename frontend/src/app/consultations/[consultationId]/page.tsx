@@ -1,14 +1,16 @@
 import { cookies } from "next/headers";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { ButtonLink } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   GetConsultationApiError,
   getConsultation,
 } from "@/features/consultations/api/get-consultation";
+import { ConsultationDocumentationFlow } from "@/features/consultations/components/consultation-documentation-flow";
 import type {
   Consultation,
   ConsultationStatus,
@@ -40,10 +42,10 @@ const statusVariants: Record<
   "neutral" | "info" | "processing" | "success" | "warning" | "destructive"
 > = {
   CREATED: "neutral",
-  PATIENT_INFORMED: "success",
+  PATIENT_INFORMED: "info",
   AUDIO_UPLOADED: "info",
   TRANSCRIBING: "processing",
-  TRANSCRIPTION_READY: "success",
+  TRANSCRIPTION_READY: "warning",
   TRANSCRIPTION_FAILED: "destructive",
 };
 
@@ -88,42 +90,33 @@ export default async function ConsultationPage({
   ).catch(() => null);
 
   return (
-    <main className="min-h-screen bg-background">
-      <div className="page-container py-7 sm:py-8">
-        <header className="mb-7 border-b border-border pb-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div>
-              <Badge variant={statusVariants[consultation.status]}>
-                {statusLabels[consultation.status]}
-              </Badge>
-              <h1 className="page-title mt-3">Consultație</h1>
-              <p className="secondary-text mt-2 max-w-2xl">
-                Verifică datele consultației și continuă cu pașii clinici
-                necesari pentru documentare.
-              </p>
-            </div>
-            <Link
-              href="/dashboard"
-              className="inline-flex h-[var(--control-height)] items-center justify-center rounded-[var(--radius-control)] border border-border bg-surface px-4 text-sm font-medium text-foreground shadow-surface transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
+    <div className="page-container py-7 sm:py-8">
+      <PageHeader
+        title="Consultație"
+        description="Verifică datele consultației și continuă cu pașii clinici necesari pentru documentare."
+        actions={
+          <>
+            <Badge variant={statusVariants[consultation.status]}>
+              {statusLabels[consultation.status]}
+            </Badge>
+            <ButtonLink href="/dashboard" variant="outline">
               Înapoi la panou
-            </Link>
-          </div>
-        </header>
+            </ButtonLink>
+          </>
+        }
+      />
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-          <section className="space-y-6">
+        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]">
+          <section className="min-w-0 space-y-6">
             <Card>
               <CardHeader>
                 <h2 className="section-title">Detalii consultație</h2>
                 <p className="secondary-text">
-                  Identificatori și stare curentă pentru fluxul de lucru.
+                  Starea curentă și pașii disponibili pentru fluxul de lucru.
                 </p>
               </CardHeader>
               <CardContent>
                 <dl className="grid gap-4 sm:grid-cols-2">
-                  <DetailItem label="ID consultație" value={consultation.id} />
-                  <DetailItem label="ID pacient" value={consultation.patientId} />
                   <DetailItem
                     label="Creată la"
                     value={formatDateTime(consultation.createdAt)}
@@ -153,10 +146,13 @@ export default async function ConsultationPage({
             </Card>
 
             <NextStep consultation={consultation} />
+            <ConsultationDocumentationFlow
+              isPatientInformed={Boolean(consultation.patientInformedAt)}
+            />
           </section>
 
-          <aside className="space-y-6">
-            <PatientSummary patient={patient} patientId={consultation.patientId} />
+          <aside className="min-w-0 space-y-6">
+            <PatientSummary patient={patient} />
             <Card variant="muted">
               <CardHeader>
                 <h2 className="section-title">Medic</h2>
@@ -172,22 +168,20 @@ export default async function ConsultationPage({
             </Card>
           </aside>
         </div>
-      </div>
-    </main>
+    </div>
   );
 }
 
 function PatientSummary({
   patient,
-  patientId,
 }: {
   patient: Patient | null;
-  patientId: string;
 }) {
   if (!patient) {
     return (
       <Alert variant="warning" title="Date pacient indisponibile">
-        Pacientul asociat nu a putut fi încărcat. ID pacient: {patientId}
+        Pacientul asociat nu a putut fi încărcat. Revino la lista de pacienți
+        pentru verificare.
       </Alert>
     );
   }

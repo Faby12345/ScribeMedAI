@@ -6,7 +6,9 @@ import { useEffect, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { ButtonLink } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   GetConsultationsApiError,
   getConsultations,
@@ -33,10 +35,10 @@ const statusVariants: Record<
   "neutral" | "info" | "processing" | "success" | "warning" | "destructive"
 > = {
   CREATED: "neutral",
-  PATIENT_INFORMED: "success",
+  PATIENT_INFORMED: "info",
   AUDIO_UPLOADED: "info",
   TRANSCRIBING: "processing",
-  TRANSCRIPTION_READY: "success",
+  TRANSCRIPTION_READY: "warning",
   TRANSCRIPTION_FAILED: "destructive",
 };
 
@@ -87,15 +89,13 @@ export function ConsultationList() {
 
   if (isLoading) {
     return (
-      <Card variant="standard" className="p-5">
-        <div className="space-y-3" aria-busy="true">
-          <div className="h-4 w-44 rounded-[var(--radius-control)] bg-secondary" />
-          <div className="h-14 rounded-[var(--radius-control)] bg-surface-muted" />
-          <div className="h-14 rounded-[var(--radius-control)] bg-surface-muted" />
-          <div className="h-14 rounded-[var(--radius-control)] bg-surface-muted" />
-          <p className="secondary-text">Se încarcă consultațiile...</p>
-        </div>
-      </Card>
+      <div className="space-y-3 rounded-xl bg-white/82 p-4" aria-busy="true">
+        <Skeleton className="h-4 w-44" />
+        <Skeleton className="h-14" />
+        <Skeleton className="h-14" />
+        <Skeleton className="h-14" />
+        <p className="secondary-text">Se încarcă consultațiile...</p>
+      </div>
     );
   }
 
@@ -119,30 +119,22 @@ export function ConsultationList() {
 
   if (!consultationsPage || consultationsPage.totalElements === 0) {
     return (
-      <Card variant="muted" className="p-6">
-        <div className="max-w-xl">
-          <p className="text-sm font-medium text-foreground">
-            Nu există consultații încă.
-          </p>
-          <p className="secondary-text mt-2">
-            Creează prima consultație din panoul clinic după alegerea
-            pacientului.
-          </p>
-          <Link
-            href="/dashboard"
-            className="mt-4 inline-flex h-[var(--control-height)] items-center justify-center rounded-[var(--radius-control)] border border-primary bg-primary px-4 text-sm font-medium text-primary-foreground shadow-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          >
+      <EmptyState
+        title="Nu există consultații încă."
+        description="Creează prima consultație din panoul clinic după alegerea pacientului."
+        action={
+          <ButtonLink href="/dashboard">
             Mergi la panou
-          </Link>
-        </div>
-      </Card>
+          </ButtonLink>
+        }
+      />
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="overflow-hidden rounded-[var(--radius-surface)] border border-border bg-surface shadow-surface">
-        <ul className="divide-y divide-border">
+      <div className="overflow-hidden rounded-xl bg-white/82">
+        <ul className="divide-y divide-border/75 border-y border-border/75">
           {consultationsPage.content.map((consultation) => (
             <ConsultationListItem
               key={consultation.id}
@@ -192,7 +184,7 @@ function ConsultationListItem({
     <li>
       <Link
         href={`/consultations/${consultation.id}`}
-        className="grid gap-3 px-4 py-4 transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+        className="grid gap-3 px-1 py-4 transition-colors hover:bg-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-3"
       >
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -212,17 +204,9 @@ function ConsultationListItem({
               label="Actualizată"
               value={formatDateTime(consultation.updatedAt)}
             />
-            <ConsultationMeta
-              label="Pacient"
-              value={shortId(consultation.patientId)}
-            />
-            <ConsultationMeta
-              label="Consultație"
-              value={shortId(consultation.id)}
-            />
           </dl>
         </div>
-        <span className="inline-flex h-9 items-center justify-center rounded-[var(--radius-control)] border border-border bg-surface px-3 text-sm font-medium text-foreground shadow-surface">
+        <span className="inline-flex h-9 items-center justify-center rounded-[var(--radius-control)] border border-border bg-white px-3 text-sm font-medium text-foreground">
           Deschide
         </span>
       </Link>
@@ -244,10 +228,6 @@ function formatDateTime(value: string) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
-}
-
-function shortId(value: string) {
-  return value.slice(0, 8);
 }
 
 function formatPatientName(consultation: Consultation) {

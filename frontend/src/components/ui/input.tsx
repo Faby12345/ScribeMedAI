@@ -1,6 +1,7 @@
 import type {
   InputHTMLAttributes,
   ReactNode,
+  Ref,
   SelectHTMLAttributes,
   TextareaHTMLAttributes,
 } from "react";
@@ -25,8 +26,9 @@ export function Input({
   leadingIcon,
   trailingIcon,
   disabled,
+  ref,
   ...props
-}: InputProps) {
+}: InputProps & { ref?: Ref<HTMLInputElement> }) {
   return (
     <div className="relative">
       {leadingIcon ? (
@@ -35,6 +37,7 @@ export function Input({
         </span>
       ) : null}
       <input
+        ref={ref}
         className={cn(
           controlClasses,
           "h-[var(--control-height)] px-3",

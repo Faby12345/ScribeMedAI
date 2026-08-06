@@ -46,7 +46,7 @@ export default function LoginPage() {
                   Sesiuni opace
                 </dt>
                 <dd className="mt-1 text-sm leading-6 text-muted-foreground">
-                  Cookie-uri gestionate de backend.
+                  Acces gestionat în siguranță pentru cabinet.
                 </dd>
               </div>
               <div>

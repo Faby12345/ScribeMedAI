@@ -1,7 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  type KeyboardEvent,
+  type RefObject,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -18,48 +24,58 @@ type NewConsultationPanelProps = {
   isOpen: boolean;
   onClose: () => void;
   onPatientCreated?: (patient: Patient) => void;
+  returnFocusRef?: RefObject<HTMLElement | null>;
 };
 
 type PanelStep = "search" | "create";
-const panelExitDurationMs = 180;
+const focusableSelector = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  '[tabindex]:not([tabindex="-1"])',
+].join(",");
 
 export function NewConsultationPanel({
   isOpen,
   onClose,
   onPatientCreated,
+  returnFocusRef,
 }: NewConsultationPanelProps) {
   const router = useRouter();
-  const [shouldRender, setShouldRender] = useState(isOpen);
-  const [isClosing, setIsClosing] = useState(false);
+  const panelRef = useRef<HTMLElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [step, setStep] = useState<PanelStep>("search");
   const [pendingPatient, setPendingPatient] = useState<Patient | null>(null);
   const [isCreatingConsultation, setIsCreatingConsultation] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      setShouldRender(true);
-      setIsClosing(false);
+    if (!isOpen) {
       return;
     }
 
-    if (!shouldRender) {
-      return;
-    }
+    const focusReturnTarget =
+      returnFocusRef?.current ??
+      (document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null);
 
-    setIsClosing(true);
-    const timeoutId = window.setTimeout(() => {
-      setShouldRender(false);
-      setIsClosing(false);
+    const animationFrameId = window.requestAnimationFrame(() => {
+      panelRef.current?.focus();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameId);
+      focusReturnTarget?.focus();
       setStep("search");
       setPendingPatient(null);
       setSubmitError(null);
-    }, panelExitDurationMs);
+    };
+  }, [isOpen, returnFocusRef]);
 
-    return () => window.clearTimeout(timeoutId);
-  }, [isOpen, shouldRender]);
-
-  if (!shouldRender) {
+  if (!isOpen) {
     return null;
   }
 
@@ -107,11 +123,23 @@ export function NewConsultationPanel({
     }
   }
 
+  function handlePanelKeyDown(event: KeyboardEvent<HTMLElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      handleClose();
+      return;
+    }
+
+    if (event.key !== "Tab" || pendingPatient) {
+      return;
+    }
+
+    trapFocus(event, panelRef.current);
+  }
+
   return (
     <div
-      className={`fixed inset-0 z-50 bg-foreground/35 ${
-        isClosing ? "panel-overlay-exit" : "panel-overlay-enter"
-      }`}
+      className="fixed inset-0 z-50 bg-foreground/35 panel-overlay-enter"
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
@@ -120,12 +148,14 @@ export function NewConsultationPanel({
       }}
     >
       <aside
-        className={`ml-auto flex h-full w-full max-w-2xl flex-col border-l border-border bg-surface shadow-elevated ${
-          isClosing ? "side-panel-exit" : "side-panel-enter"
-        }`}
+        ref={panelRef}
+        className="ml-auto flex h-full w-full max-w-2xl flex-col border-l border-border bg-surface shadow-elevated side-panel-enter"
         role="dialog"
         aria-modal="true"
         aria-labelledby="new-consultation-title"
+        aria-describedby="new-consultation-description"
+        tabIndex={-1}
+        onKeyDown={handlePanelKeyDown}
       >
         <header className="border-b border-border px-5 py-4 sm:px-6">
           <div className="flex items-start justify-between gap-4">
@@ -136,11 +166,12 @@ export function NewConsultationPanel({
               <h2 id="new-consultation-title" className="mt-3 text-xl font-semibold text-foreground">
                 Consultație nouă
               </h2>
-              <p className="secondary-text mt-1">
+              <p id="new-consultation-description" className="secondary-text mt-1">
                 Alege pacientul pentru care începi consultația.
               </p>
             </div>
             <Button
+              ref={closeButtonRef}
               type="button"
               variant="ghost"
               size="sm"
@@ -189,6 +220,44 @@ export function NewConsultationPanel({
   );
 }
 
+function trapFocus(
+  event: KeyboardEvent<HTMLElement>,
+  container: HTMLElement | null,
+) {
+  if (!container) {
+    return;
+  }
+
+  const focusableElements = Array.from(
+    container.querySelectorAll<HTMLElement>(focusableSelector),
+  ).filter(
+    (element) =>
+      !element.hasAttribute("disabled") &&
+      element.getAttribute("aria-hidden") !== "true" &&
+      element.offsetParent !== null,
+  );
+
+  if (focusableElements.length === 0) {
+    event.preventDefault();
+    container.focus();
+    return;
+  }
+
+  const firstElement = focusableElements[0];
+  const lastElement = focusableElements[focusableElements.length - 1];
+
+  if (event.shiftKey && document.activeElement === firstElement) {
+    event.preventDefault();
+    lastElement.focus();
+    return;
+  }
+
+  if (!event.shiftKey && document.activeElement === lastElement) {
+    event.preventDefault();
+    firstElement.focus();
+  }
+}
+
 function SearchPatientStep({
   onCreatePatient,
   onSelectPatient,
@@ -215,6 +284,7 @@ function SearchPatientStep({
             <PatientPicker
               onSelectPatient={onSelectPatient}
               onCreatePatient={onCreatePatient}
+              autoFocusSearch
             />
           </section>
         </div>
@@ -248,6 +318,31 @@ function ConfirmConsultationDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const dialogRef = useRef<HTMLElement>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    cancelButtonRef.current?.focus();
+  }, []);
+
+  function handleConfirmKeyDown(event: KeyboardEvent<HTMLElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (!isCreating) {
+        onCancel();
+      }
+
+      return;
+    }
+
+    if (event.key === "Tab") {
+      event.stopPropagation();
+      trapFocus(event, dialogRef.current);
+    }
+  }
+
   return (
     <div
       className="absolute inset-0 z-10 flex items-center justify-center bg-foreground/30 px-4"
@@ -259,10 +354,14 @@ function ConfirmConsultationDialog({
       }}
     >
       <section
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-consultation-title"
+        aria-describedby="confirm-consultation-description confirm-consultation-patient"
         className="w-full max-w-md rounded-[var(--radius-surface)] border border-border bg-surface p-5 shadow-elevated"
+        tabIndex={-1}
+        onKeyDown={handleConfirmKeyDown}
       >
         <Badge variant="warning">Confirmare necesară</Badge>
         <h3
@@ -271,11 +370,14 @@ function ConfirmConsultationDialog({
         >
           Creezi o consultație nouă?
         </h3>
-        <p className="secondary-text mt-2">
+        <p id="confirm-consultation-description" className="secondary-text mt-2">
           Verifică pacientul selectat înainte de a deschide fișa consultației.
         </p>
 
-        <div className="mt-4 rounded-[var(--radius-control)] border border-border bg-surface-muted p-4">
+        <div
+          id="confirm-consultation-patient"
+          className="mt-4 rounded-[var(--radius-control)] border border-border bg-surface-muted p-4"
+        >
           <p className="text-sm font-semibold text-foreground">
             {patient.lastName} {patient.firstName}
           </p>
@@ -297,6 +399,7 @@ function ConfirmConsultationDialog({
 
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button
+            ref={cancelButtonRef}
             type="button"
             variant="outline"
             onClick={onCancel}
