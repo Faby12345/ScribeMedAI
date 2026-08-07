@@ -10,19 +10,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import ro.scribemed.backend.consultation.application.AudioUploadResponse;
-import ro.scribemed.backend.consultation.application.ConsultationResponse;
-import ro.scribemed.backend.consultation.application.ConsultationService;
-import ro.scribemed.backend.consultation.application.CreateConsultationRequest;
-import ro.scribemed.backend.consultation.application.TranscriptResponse;
+import ro.scribemed.backend.consultation.application.*;
 import ro.scribemed.backend.identity.security.CurrentUser;
 
 @RestController
@@ -99,5 +89,15 @@ public class ConsultationController {
             @PathVariable UUID consultationId
     ) {
         return consultationService.getTranscript(consultationId, currentUser.tenantId());
+    }
+
+    @PostMapping("{consultationId}/notes")
+    ResponseEntity<NotesResponse> processNotes(
+            @AuthenticationPrincipal CurrentUser currentUser,
+            @PathVariable UUID consultationId,
+            @RequestBody NotesRequest notesRequest
+    ) {
+        consultationService.processNotes(notesRequest);
+        return ResponseEntity.ok(new NotesResponse("recived"));
     }
 }
