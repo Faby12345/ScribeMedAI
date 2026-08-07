@@ -7,12 +7,13 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox, Input, Textarea } from "@/components/ui/input";
 import { cn } from "@/lib/class-names";
+import {sendNotes, SendNotesApiError} from "@/features/consultations/api/send-notes";
 
 type DocumentationSource = "audio" | "notes";
 type FlowStep = "source" | "capture";
 type AudioMode = "record" | "upload";
 
-type ClinicalNotes = {
+export type ClinicalNotes = {
   reason: string;
   history: string;
   objective: string;
@@ -21,7 +22,8 @@ type ClinicalNotes = {
 };
 
 type ConsultationDocumentationFlowProps = {
-  isPatientInformed: boolean;
+  consultationId: string
+  isPatientInformed: boolean
 };
 
 const emptyNotes: ClinicalNotes = {
@@ -46,7 +48,8 @@ const testClinicalNotes: ClinicalNotes = {
 const showTestNotesPrefill = process.env.NODE_ENV !== "production";
 
 export function ConsultationDocumentationFlow({
-  isPatientInformed,
+    consultationId,
+                                                isPatientInformed,
 }: ConsultationDocumentationFlowProps) {
   const router = useRouter();
   const [step, setStep] = useState<FlowStep>("source");
@@ -178,22 +181,37 @@ export function ConsultationDocumentationFlow({
     setNotes(testClinicalNotes);
   }
 
-  function submitForProcessing() {
+
+
+  async function submitForProcessing() {
     if (!canSubmit) {
       return;
     }
 
     setIsSubmitting(true);
-    // window.setTimeout(() => {
-    //   router.push("/dashboard");
-    //   router.refresh();
-    // }, 650);
+
+    if(source == "notes"){
+
+      try {
+        await sendNotes(consultationId, notes);
+        router.push("/dashboard")
+        router.refresh()
+      } catch (error) {
+        setRecordingError(
+            error instanceof SendNotesApiError ? error.message : "Notitele nu au putut fi trimise. Incearca din nou"
+        )
+        setIsSubmitting(false)
+      }
 
 
-    window.setTimeout(() => {
-      console.log(notes)
-      setIsSubmitting(false)
-    }, 2000)
+      return;
+
+    } else {
+      console.log("this is audio")
+    }
+
+
+
 
   }
 

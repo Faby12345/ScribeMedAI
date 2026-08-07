@@ -230,4 +230,8 @@ public class ConsultationService {
         return originalFilename.substring(dotIndex).replaceAll("[^A-Za-z0-9.]", "");
     }
 
+    public void processNotes(NotesRequest request){
+        System.out.println(request);
+    }
+
 }

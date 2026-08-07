@@ -147,6 +147,7 @@ export default async function ConsultationPage({
 
             <NextStep consultation={consultation} />
             <ConsultationDocumentationFlow
+                consultationId={consultationId}
               isPatientInformed={Boolean(consultation.patientInformedAt)}
             />
           </section>

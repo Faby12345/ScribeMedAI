@@ -2,10 +2,13 @@ spring:
   application:
     name: scribemed-backend
 
+
+
   datasource:
     url: ${DATABASE_URL}
     username: ${DATABASE_USERNAME}
     password: ${DATABASE_PASSWORD}
+
 
   jpa:
     open-in-view: false
@@ -72,3 +75,12 @@ scribemed:
       model: ${DEEPGRAM_MODEL:nova-3}
       language: ${DEEPGRAM_LANGUAGE:ro}
       smart-format: ${DEEPGRAM_SMART_FORMAT:true}
+
+  llm:
+    provider: huggingface
+
+    huggingface:
+      api-key: ${HF_TOKEN:}
+      base-url: ${HUGGINGFACE_BASE_URL:https://router.huggingface.co/v1}
+
+

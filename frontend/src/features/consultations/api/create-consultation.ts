@@ -63,7 +63,7 @@ export async function createConsultation(
   return response.json();
 }
 
-async function getCsrfToken(): Promise<CsrfTokenResponse> {
+export async function getCsrfToken(): Promise<CsrfTokenResponse> {
   const response = await fetch("/api/v1/csrf", {
     method: "GET",
     credentials: "include",
@@ -80,7 +80,7 @@ async function getCsrfToken(): Promise<CsrfTokenResponse> {
   return response.json();
 }
 
-function createHeaders(csrfToken: CsrfTokenResponse) {
+export function createHeaders(csrfToken: CsrfTokenResponse) {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     [csrfToken.headerName]: csrfToken.token,
