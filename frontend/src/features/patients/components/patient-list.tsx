@@ -18,7 +18,6 @@ import {
   ageFromBirthDate,
   formatDate,
   patientDisplayName,
-  sexLabels,
   statusLabels,
 } from "@/features/patients/components/patient-formatters";
 import type { Patient } from "@/features/patients/types";
@@ -84,12 +83,13 @@ export function PatientList({
       return patients;
     }
 
-    return patients.filter((patient) => {
+      return patients.filter((patient) => {
       const searchableText = [
         patient.firstName,
         patient.lastName,
         patient.phone,
         patient.email,
+        statusLabels[patient.status],
       ]
         .filter(Boolean)
         .join(" ")
@@ -125,9 +125,6 @@ export function PatientList({
     <div className="space-y-4">
       <div className="flex flex-col gap-3 rounded-[var(--radius-surface)] border border-border bg-surface p-4 shadow-surface sm:flex-row sm:items-end sm:justify-between">
         <label className="min-w-0 flex-1 space-y-2">
-          <span className="text-sm font-medium text-foreground">
-            Caută pacient
-          </span>
           <SearchInput
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -183,8 +180,9 @@ export function PatientList({
 
       {visiblePatients.length > 0 ? (
         <div className="overflow-hidden rounded-[var(--radius-surface)] border border-border bg-surface shadow-surface">
-          <div className="hidden grid-cols-[minmax(15rem,1.4fr)_minmax(10rem,0.8fr)_minmax(12rem,1fr)_minmax(10rem,0.8fr)_7rem] gap-4 border-b border-border bg-surface-muted px-4 py-3 text-xs font-semibold uppercase text-muted-foreground md:grid">
+          <div className="hidden grid-cols-[minmax(14rem,1.3fr)_minmax(8rem,0.7fr)_minmax(10rem,0.8fr)_minmax(11rem,1fr)_minmax(10rem,0.8fr)_7rem] gap-4 border-b border-border bg-surface-muted px-4 py-3 text-xs font-semibold uppercase text-muted-foreground md:grid">
             <span>Pacient</span>
+            <span>Status</span>
             <span>Naștere</span>
             <span>Contact</span>
             <span>Ultima consultație</span>
@@ -208,7 +206,7 @@ export default function PatientListItem({ patient }: { patient: Patient }) {
     <li>
       <Link
         href={`/patients/${patient.id}`}
-        className="grid gap-3 px-4 py-4 transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring md:grid-cols-[minmax(15rem,1.4fr)_minmax(10rem,0.8fr)_minmax(12rem,1fr)_minmax(10rem,0.8fr)_7rem] md:items-center"
+        className="grid gap-3 px-4 py-4 transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring md:grid-cols-[minmax(14rem,1.3fr)_minmax(8rem,0.7fr)_minmax(10rem,0.8fr)_minmax(11rem,1fr)_minmax(10rem,0.8fr)_7rem] md:items-center"
       >
         <div className="flex min-w-0 items-center gap-3">
           <PatientAvatar patient={patient} />
@@ -217,10 +215,16 @@ export default function PatientListItem({ patient }: { patient: Patient }) {
               <p className="truncate text-sm font-semibold text-foreground">
                 {patientDisplayName(patient)}
               </p>
-              <Badge variant={patient.status === "ACTIVE" ? "info" : "neutral"}>
-                {statusLabels[patient.status]}
-              </Badge>
             </div>
+          </div>
+        </div>
+
+        <div>
+          <p className="caption-text md:hidden">Status</p>
+          <div className="mt-1 md:mt-0">
+            <Badge variant={patient.status === "ACTIVE" ? "success" : "neutral"}>
+              {statusLabels[patient.status]}
+            </Badge>
           </div>
         </div>
 
@@ -233,11 +237,6 @@ export default function PatientListItem({ patient }: { patient: Patient }) {
 
         <dl className="space-y-1 text-sm text-muted-foreground">
           <PatientMeta label="Telefon" value={patient.phone} />
-          <PatientMeta label="Email" value={patient.email} />
-          <PatientMeta
-            label="Sex"
-            value={patient.sex ? sexLabels[patient.sex] : null}
-          />
         </dl>
 
         <p className="text-sm text-muted-foreground">Indisponibilă</p>
@@ -281,9 +280,10 @@ function PatientListSkeleton() {
           {Array.from({ length: 5 }, (_, index) => (
             <div
               key={index}
-              className="grid gap-3 px-4 py-4 md:grid-cols-[minmax(15rem,1.4fr)_minmax(10rem,0.8fr)_minmax(12rem,1fr)_minmax(10rem,0.8fr)_7rem]"
+              className="grid gap-3 px-4 py-4 md:grid-cols-[minmax(14rem,1.3fr)_minmax(8rem,0.7fr)_minmax(10rem,0.8fr)_minmax(11rem,1fr)_minmax(10rem,0.8fr)_7rem]"
             >
               <Skeleton className="h-10" />
+              <Skeleton className="h-9" />
               <Skeleton className="h-10" />
               <Skeleton className="h-10" />
               <Skeleton className="h-10" />

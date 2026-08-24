@@ -7,6 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Checkbox, Textarea } from "@/components/ui/input";
+import {
+  ApproveDocumentApiError,
+  approveDocument,
+} from "@/features/documents/api/approve-document";
+import {
+  SaveDocumentDraftApiError,
+  saveDocumentDraft,
+} from "@/features/documents/api/save-document-draft";
 import type {
   DocumentReviewDocument,
   SoapDraft,
@@ -23,6 +31,13 @@ type ReviewFlag = {
 };
 
 type SaveState = "idle" | "dirty" | "saved";
+type OperationState = "idle" | "saving" | "approving";
+
+type StatusMessage = {
+  variant: "info" | "error" | "success" | "warning";
+  title: string;
+  text: string;
+};
 
 type DocumentReviewPageProps = {
   consultationId: string;
@@ -100,6 +115,8 @@ export function DocumentReviewPage({
   consultationId,
   reviewDocument,
 }: DocumentReviewPageProps) {
+  const [currentDocument, setCurrentDocument] =
+    useState<DocumentReviewDocument | null>(reviewDocument ?? null);
   const [draft, setDraft] = useState<SoapDraft>(
     reviewDocument?.draft ?? emptyDraft,
   );
@@ -118,7 +135,12 @@ export function DocumentReviewPage({
   const [saveState, setSaveState] = useState<SaveState>(
     reviewDocument ? "saved" : "idle",
   );
-  const [approvalMessage, setApprovalMessage] = useState<string | null>(null);
+  const [operationState, setOperationState] =
+    useState<OperationState>("idle");
+  const [statusMessage, setStatusMessage] = useState<StatusMessage | null>(
+    null,
+  );
+  const [isDemoDraft, setIsDemoDraft] = useState(false);
 
   const reviewedSectionCount = Object.values(reviewedSections).filter(Boolean)
     .length;
@@ -128,7 +150,15 @@ export function DocumentReviewPage({
   const allSectionsReviewed = reviewedSectionCount === 4;
   const allFlagsResolved =
     reviewFlags.length === 0 || resolvedFlagCount === reviewFlags.length;
+  const isApproved = currentDocument?.documentStatus === "APPROVED";
+  const isSaving = operationState === "saving";
+  const isApproving = operationState === "approving";
+  const isBusy = operationState !== "idle";
   const canApprove =
+    Boolean(currentDocument) &&
+    !isApproved &&
+    !isDemoDraft &&
+    !isBusy &&
     hasDraftContent &&
     allSectionsReviewed &&
     allFlagsResolved &&
@@ -137,6 +167,10 @@ export function DocumentReviewPage({
   const documentStatus = useMemo(() => {
     if (!hasDraftContent) {
       return { label: "Draft neîncărcat", variant: "neutral" as const };
+    }
+
+    if (isApproved) {
+      return { label: "Aprobat", variant: "success" as const };
     }
 
     if (canApprove) {
@@ -148,7 +182,7 @@ export function DocumentReviewPage({
     }
 
     return { label: "În revizuire", variant: "processing" as const };
-  }, [canApprove, hasDraftContent, saveState]);
+  }, [canApprove, hasDraftContent, isApproved, saveState]);
 
   function fillMockData() {
     setDraft(mockDraft);
@@ -157,41 +191,145 @@ export function DocumentReviewPage({
     setReviewedSections(initialReviewedSections);
     setResolvedFlags({});
     setSaveState("dirty");
-    setApprovalMessage(null);
+    setIsDemoDraft(true);
+    setStatusMessage(null);
   }
 
   function updateSection(sectionId: SoapSectionId, value: string) {
+    if (isApproved) {
+      return;
+    }
+
     setDraft((current) => ({ ...current, [sectionId]: value }));
     setReviewedSections((current) => ({ ...current, [sectionId]: false }));
     setSaveState("dirty");
-    setApprovalMessage(null);
+    setIsDemoDraft(false);
+    setStatusMessage(null);
   }
 
   function toggleSectionReview(sectionId: SoapSectionId, checked: boolean) {
+    if (isApproved) {
+      return;
+    }
+
     setReviewedSections((current) => ({ ...current, [sectionId]: checked }));
-    setApprovalMessage(null);
+    setStatusMessage(null);
   }
 
   function toggleFlag(flagId: string, checked: boolean) {
+    if (isApproved) {
+      return;
+    }
+
     setResolvedFlags((current) => ({ ...current, [flagId]: checked }));
-    setApprovalMessage(null);
+    setStatusMessage(null);
   }
 
-  function saveDraft() {
+  async function handleSaveDraft() {
     if (!hasDraftContent) {
       return;
     }
 
-    setSaveState("saved");
-    setApprovalMessage("Draft salvat local pentru demonstrație.");
+    if (isDemoDraft) {
+      setStatusMessage({
+        variant: "warning",
+        title: "Date demonstrative",
+        text: "Draftul demonstrativ nu poate fi salvat peste documentul real.",
+      });
+      return;
+    }
+
+    if (!currentDocument) {
+      setStatusMessage({
+        variant: "warning",
+        title: "Draft indisponibil",
+        text: "Încarcă un document real înainte de salvare.",
+      });
+      return;
+    }
+
+    setOperationState("saving");
+    setStatusMessage(null);
+
+    try {
+      const unresolvedReviewFlags = reviewFlags
+        .filter((flag) => !resolvedFlags[flag.id])
+        .map((flag) => flag.description);
+      const savedDocument = await saveDocumentDraft({
+        documentId: currentDocument.documentId,
+        draft,
+        reviewFlags: unresolvedReviewFlags,
+      });
+
+      setCurrentDocument(savedDocument);
+      setDraft(savedDocument.draft);
+      setTranscript(savedDocument.transcript.transcriptText);
+      setReviewFlags(savedDocument.reviewFlags.map(toReviewFlag));
+      setResolvedFlags({});
+      setSaveState("saved");
+      setIsDemoDraft(false);
+      setStatusMessage({
+        variant: "success",
+        title: "Draft salvat",
+        text: "Modificările au fost salvate ca versiune nouă de draft.",
+      });
+    } catch (error) {
+      setStatusMessage({
+        variant: "error",
+        title: "Salvare eșuată",
+        text:
+          error instanceof SaveDocumentDraftApiError
+            ? error.message
+            : "Draftul nu a putut fi salvat. Încearcă din nou.",
+      });
+    } finally {
+      setOperationState("idle");
+    }
   }
 
-  function approveDraft() {
+  async function handleApproveDraft() {
     if (!canApprove) {
       return;
     }
 
-    setApprovalMessage("Document pregătit pentru aprobarea reală.");
+    if (!currentDocument) {
+      return;
+    }
+
+    setOperationState("approving");
+    setStatusMessage(null);
+
+    try {
+      const approval = await approveDocument(
+        currentDocument.documentId,
+        currentDocument.versionId,
+      );
+
+      setCurrentDocument({
+        ...currentDocument,
+        documentStatus: approval.documentStatus,
+        versionStatus: approval.versionStatus,
+        versionId: approval.versionId,
+        versionNumber: approval.versionNumber,
+      });
+      setSaveState("saved");
+      setStatusMessage({
+        variant: "success",
+        title: "Document aprobat",
+        text: "Documentul clinic a fost aprobat și nu mai poate fi editat din acest flux.",
+      });
+    } catch (error) {
+      setStatusMessage({
+        variant: "error",
+        title: "Aprobare eșuată",
+        text:
+          error instanceof ApproveDocumentApiError
+            ? error.message
+            : "Documentul nu a putut fi aprobat. Încearcă din nou.",
+      });
+    } finally {
+      setOperationState("idle");
+    }
   }
 
   return (
@@ -262,6 +400,7 @@ export function DocumentReviewPage({
                     label={sectionLabels[sectionId]}
                     value={draft[sectionId]}
                     reviewed={reviewedSections[sectionId]}
+                    disabled={isApproved || isBusy}
                     onChange={(value) => updateSection(sectionId, value)}
                     onReviewedChange={(checked) =>
                       toggleSectionReview(sectionId, checked)
@@ -281,22 +420,23 @@ export function DocumentReviewPage({
             saveState={saveState}
             canApprove={canApprove}
             hasDraftContent={hasDraftContent}
-            onSave={saveDraft}
-            onApprove={approveDraft}
+            isApproved={isApproved}
+            isSaving={isSaving}
+            isApproving={isApproving}
+            onSave={handleSaveDraft}
+            onApprove={handleApproveDraft}
           />
 
-          {approvalMessage ? (
-            <Alert
-              variant={canApprove ? "success" : "info"}
-              title={canApprove ? "Verificare completă" : "Status"}
-            >
-              {approvalMessage}
+          {statusMessage ? (
+            <Alert variant={statusMessage.variant} title={statusMessage.title}>
+              {statusMessage.text}
             </Alert>
           ) : null}
 
           <ReviewFlagsPanel
             flags={reviewFlags}
             resolvedFlags={resolvedFlags}
+            disabled={isApproved || isBusy}
             onResolvedChange={toggleFlag}
           />
 
@@ -361,6 +501,7 @@ function SoapSectionEditor({
   label,
   value,
   reviewed,
+  disabled,
   onChange,
   onReviewedChange,
 }: {
@@ -368,6 +509,7 @@ function SoapSectionEditor({
   label: string;
   value: string;
   reviewed: boolean;
+  disabled: boolean;
   onChange: (value: string) => void;
   onReviewedChange: (checked: boolean) => void;
 }) {
@@ -395,6 +537,7 @@ function SoapSectionEditor({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder="Text draft"
+          disabled={disabled}
           className="min-h-32 border-border bg-white text-[0.95rem] leading-7 shadow-none"
         />
         <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3 sm:flex-row sm:items-start sm:justify-between">
@@ -402,7 +545,7 @@ function SoapSectionEditor({
             label={`Secțiunea ${label} este verificată`}
             checked={reviewed}
             onChange={(event) => onReviewedChange(event.target.checked)}
-            disabled={!value.trim()}
+            disabled={disabled || !value.trim()}
           />
           <span className="caption-text sm:text-right">
             Editarea resetează verificarea.
@@ -420,6 +563,9 @@ function ApprovalPanel({
   saveState,
   canApprove,
   hasDraftContent,
+  isApproved,
+  isSaving,
+  isApproving,
   onSave,
   onApprove,
 }: {
@@ -429,6 +575,9 @@ function ApprovalPanel({
   saveState: SaveState;
   canApprove: boolean;
   hasDraftContent: boolean;
+  isApproved: boolean;
+  isSaving: boolean;
+  isApproving: boolean;
   onSave: () => void;
   onApprove: () => void;
 }) {
@@ -484,7 +633,11 @@ function ApprovalPanel({
             type="button"
             variant="primary"
             onClick={onSave}
-            disabled={!hasDraftContent || saveState === "saved"}
+            disabled={
+              isApproved || isApproving || !hasDraftContent || saveState === "saved"
+            }
+            isLoading={isSaving}
+            loadingText="Se salvează"
           >
             Salvează draftul
           </Button>
@@ -492,9 +645,11 @@ function ApprovalPanel({
             type="button"
             variant="success"
             onClick={onApprove}
-            disabled={!canApprove}
+            disabled={isApproved || !canApprove}
+            isLoading={isApproving}
+            loadingText="Se aprobă"
           >
-            Aprobă documentul
+            {isApproved ? "Document aprobat" : "Aprobă documentul"}
           </Button>
         </div>
       </CardContent>
@@ -505,10 +660,12 @@ function ApprovalPanel({
 function ReviewFlagsPanel({
   flags,
   resolvedFlags,
+  disabled,
   onResolvedChange,
 }: {
   flags: ReviewFlag[];
   resolvedFlags: Record<string, boolean>;
+  disabled: boolean;
   onResolvedChange: (flagId: string, checked: boolean) => void;
 }) {
   return (
@@ -563,6 +720,7 @@ function ReviewFlagsPanel({
                 <Checkbox
                   label="Verificat"
                   checked={Boolean(resolvedFlags[flag.id])}
+                  disabled={disabled}
                   onChange={(event) =>
                     onResolvedChange(flag.id, event.target.checked)
                   }

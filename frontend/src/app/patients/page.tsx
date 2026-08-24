@@ -17,24 +17,16 @@ export default async function PatientsPage() {
   return (
     <PatientAreaShell user={user} activeItem="patients">
       <PageHeader
-        title="Pacienți"
-        description="Caută rapid pacienții existenți, verifică datele de contact și deschide profilul clinic relevant."
+        title="Lista pacienților"
+        description="Căutarea este aplicată pe pacienții încărcați în această sesiune."
         actions={
-          <ButtonLink href="/patients/new">
-            Adaugă pacient
+          <ButtonLink href="/dashboard" variant="outline">
+            Înapoi la panou
           </ButtonLink>
         }
       />
 
-      <section aria-labelledby="patients-list-title">
-        <div className="mb-4">
-          <h2 id="patients-list-title" className="section-title">
-            Lista pacienților
-          </h2>
-          <p className="secondary-text mt-1">
-            Căutarea este aplicată pe pacienții încărcați în această sesiune.
-          </p>
-        </div>
+      <section aria-label="Lista pacienților">
         <PatientList />
       </section>
     </PatientAreaShell>
