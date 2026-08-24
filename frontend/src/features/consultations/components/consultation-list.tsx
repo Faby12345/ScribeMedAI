@@ -28,6 +28,9 @@ const statusLabels: Record<ConsultationStatus, string> = {
   TRANSCRIBING: "În transcriere",
   TRANSCRIPTION_READY: "Transcriere disponibilă",
   TRANSCRIPTION_FAILED: "Transcriere eșuată",
+  NOTES_PROCESSING: "Draft în generare",
+  NOTES_READY: "Draft disponibil",
+  NOTES_FAILED: "Generare draft eșuată",
 };
 
 const statusVariants: Record<
@@ -40,6 +43,9 @@ const statusVariants: Record<
   TRANSCRIBING: "processing",
   TRANSCRIPTION_READY: "warning",
   TRANSCRIPTION_FAILED: "destructive",
+  NOTES_PROCESSING: "processing",
+  NOTES_READY: "success",
+  NOTES_FAILED: "destructive",
 };
 
 export function ConsultationList() {

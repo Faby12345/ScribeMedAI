@@ -24,11 +24,14 @@ const activityLimit = 50;
 
 const consultationPriority: Record<ConsultationStatus, number> = {
   TRANSCRIPTION_FAILED: 0,
-  TRANSCRIPTION_READY: 1,
-  TRANSCRIBING: 2,
-  AUDIO_UPLOADED: 3,
-  PATIENT_INFORMED: 4,
-  CREATED: 5,
+  NOTES_FAILED: 1,
+  NOTES_READY: 2,
+  TRANSCRIPTION_READY: 3,
+  NOTES_PROCESSING: 4,
+  TRANSCRIBING: 5,
+  AUDIO_UPLOADED: 6,
+  PATIENT_INFORMED: 7,
+  CREATED: 8,
 };
 
 const statusLabels: Record<ConsultationStatus, string> = {
@@ -38,6 +41,9 @@ const statusLabels: Record<ConsultationStatus, string> = {
   TRANSCRIBING: "În transcriere",
   TRANSCRIPTION_READY: "Gata pentru revizuire",
   TRANSCRIPTION_FAILED: "Transcriere eșuată",
+  NOTES_PROCESSING: "Draft în generare",
+  NOTES_READY: "Draft disponibil",
+  NOTES_FAILED: "Generare draft eșuată",
 };
 
 const statusVariants: Record<
@@ -50,6 +56,9 @@ const statusVariants: Record<
   TRANSCRIBING: "processing",
   TRANSCRIPTION_READY: "warning",
   TRANSCRIPTION_FAILED: "destructive",
+  NOTES_PROCESSING: "processing",
+  NOTES_READY: "success",
+  NOTES_FAILED: "destructive",
 };
 
 const nextActionLabels: Record<ConsultationStatus, string> = {
@@ -59,6 +68,9 @@ const nextActionLabels: Record<ConsultationStatus, string> = {
   TRANSCRIBING: "Vezi status",
   TRANSCRIPTION_READY: "Revizuiește",
   TRANSCRIPTION_FAILED: "Deschide",
+  NOTES_PROCESSING: "Vezi status",
+  NOTES_READY: "Revizuiește",
+  NOTES_FAILED: "Deschide",
 };
 
 const statusToneClasses: Record<ConsultationStatus, string> = {
@@ -68,6 +80,9 @@ const statusToneClasses: Record<ConsultationStatus, string> = {
   TRANSCRIBING: "bg-info motion-safe:animate-pulse",
   TRANSCRIPTION_READY: "bg-warning",
   TRANSCRIPTION_FAILED: "bg-destructive",
+  NOTES_PROCESSING: "bg-info motion-safe:animate-pulse",
+  NOTES_READY: "bg-success",
+  NOTES_FAILED: "bg-destructive",
 };
 
 export function DashboardShell() {

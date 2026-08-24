@@ -35,6 +35,9 @@ const statusLabels: Record<ConsultationStatus, string> = {
   TRANSCRIBING: "În transcriere",
   TRANSCRIPTION_READY: "Transcriere disponibilă",
   TRANSCRIPTION_FAILED: "Transcriere eșuată",
+  NOTES_PROCESSING: "Draft în generare",
+  NOTES_READY: "Draft disponibil",
+  NOTES_FAILED: "Generare draft eșuată",
 };
 
 const statusVariants: Record<
@@ -47,6 +50,9 @@ const statusVariants: Record<
   TRANSCRIBING: "processing",
   TRANSCRIPTION_READY: "warning",
   TRANSCRIPTION_FAILED: "destructive",
+  NOTES_PROCESSING: "processing",
+  NOTES_READY: "success",
+  NOTES_FAILED: "destructive",
 };
 
 export default async function ConsultationPage({
@@ -96,6 +102,11 @@ export default async function ConsultationPage({
         description="Verifică datele consultației și continuă cu pașii clinici necesari pentru documentare."
         actions={
           <>
+            {consultation.status === "NOTES_READY" ? (
+              <ButtonLink href={`/consultations/${consultation.id}/review`}>
+                Revizuiește draftul
+              </ButtonLink>
+            ) : null}
             <Badge variant={statusVariants[consultation.status]}>
               {statusLabels[consultation.status]}
             </Badge>
@@ -105,6 +116,7 @@ export default async function ConsultationPage({
           </>
         }
       />
+
 
         <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]">
           <section className="min-w-0 space-y-6">

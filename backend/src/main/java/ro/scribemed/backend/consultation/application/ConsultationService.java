@@ -223,10 +223,6 @@ public class ConsultationService {
     }
 
     private void validateAudio(MultipartFile file) {
-
-        System.out.println(file.getOriginalFilename());
-        System.out.println(file.getContentType());
-
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("Audio file is required");
         }

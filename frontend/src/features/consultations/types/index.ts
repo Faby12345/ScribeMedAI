@@ -4,7 +4,10 @@ export type ConsultationStatus =
   | "AUDIO_UPLOADED"
   | "TRANSCRIBING"
   | "TRANSCRIPTION_READY"
-  | "TRANSCRIPTION_FAILED";
+  | "TRANSCRIPTION_FAILED"
+  | "NOTES_PROCESSING"
+  | "NOTES_READY"
+  | "NOTES_FAILED";
 
 export type Consultation = {
   id: string;
