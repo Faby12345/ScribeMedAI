@@ -7,6 +7,8 @@ import java.util.Set;
 import java.util.UUID;
 
 import jakarta.persistence.EntityNotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,12 +22,22 @@ import ro.scribemed.backend.audio.domain.ConsultationAudio;
 import ro.scribemed.backend.audio.infrastructure.ConsultationAudioRepository;
 import ro.scribemed.backend.audit.application.AuditService;
 import ro.scribemed.backend.consultation.domain.Consultation;
+import ro.scribemed.backend.consultation.domain.ConsultationNotes;
+import ro.scribemed.backend.consultation.dto.AudioUploadResponse;
+import ro.scribemed.backend.consultation.dto.ConsultationResponse;
+import ro.scribemed.backend.consultation.dto.CreateConsultationRequest;
+import ro.scribemed.backend.consultation.dto.NotesRequest;
+import ro.scribemed.backend.consultation.dto.NotesResponse;
+import ro.scribemed.backend.consultation.dto.TranscriptResponse;
+import ro.scribemed.backend.consultation.infrastructure.ConsultationNotesRepository;
 import ro.scribemed.backend.consultation.infrastructure.ConsultationRepository;
+import ro.scribemed.backend.identity.application.AuthService;
 import ro.scribemed.backend.identity.domain.AppUser;
 import ro.scribemed.backend.identity.infrastructure.AppUserRepository;
 import ro.scribemed.backend.patient.domain.Patient;
 import ro.scribemed.backend.patient.infrastructure.PatientRepository;
 import ro.scribemed.backend.processing.domain.ProcessingJob;
+import ro.scribemed.backend.processing.domain.ProcessingJobStatus;
 import ro.scribemed.backend.processing.domain.ProcessingJobType;
 import ro.scribemed.backend.processing.infrastructure.ProcessingJobRepository;
 import ro.scribemed.backend.tenancy.domain.Tenant;
@@ -35,13 +47,18 @@ import ro.scribemed.backend.transcription.infrastructure.ConsultationTranscriptR
 @Service
 public class ConsultationService {
 
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+
     private static final Set<String> ALLOWED_AUDIO_TYPES = Set.of(
             "audio/webm",
             "audio/wav",
             "audio/x-wav",
             "audio/mpeg",
             "audio/mp4",
-            "audio/ogg"
+            "audio/ogg",
+            "audio/x-m4a",
+            "audio/m4a",
+            "audio/webm;codecs=opus"
     );
 
     private final ConsultationRepository consultationRepository;
@@ -54,6 +71,7 @@ public class ConsultationService {
     private final AudioStorageService audioStorageService;
     private final AuditService auditService;
     private final long maxAudioSizeBytes;
+    private final ConsultationNotesRepository consultationNotesRepository;
 
     public ConsultationService(
             ConsultationRepository consultationRepository,
@@ -65,7 +83,8 @@ public class ConsultationService {
             ConsultationTranscriptRepository transcriptRepository,
             AudioStorageService audioStorageService,
             AuditService auditService,
-            @Value("${scribemed.audio.max-size-bytes}") long maxAudioSizeBytes
+            @Value("${scribemed.audio.max-size-bytes}") long maxAudioSizeBytes,
+            ConsultationNotesRepository consultationNotesRepository
     ) {
         this.consultationRepository = consultationRepository;
         this.patientRepository = patientRepository;
@@ -77,6 +96,7 @@ public class ConsultationService {
         this.audioStorageService = audioStorageService;
         this.auditService = auditService;
         this.maxAudioSizeBytes = maxAudioSizeBytes;
+        this.consultationNotesRepository = consultationNotesRepository;
     }
 
     @Transactional
@@ -131,6 +151,10 @@ public class ConsultationService {
         Consultation consultation = getTenantConsultation(consultationId, tenantId);
         AppUser actorUser = appUserRepository.findByIdAndTenant_Id(actorUserId, tenantId)
                 .orElseThrow(() -> new AccessDeniedException("Actor user is not part of the tenant"));
+
+        if (consultation.getPatientInformedAt() == null) {
+            throw new IllegalArgumentException("Patient informed confirmation is required before audio upload");
+        }
 
         validateAudio(file);
 
@@ -199,6 +223,10 @@ public class ConsultationService {
     }
 
     private void validateAudio(MultipartFile file) {
+
+        System.out.println(file.getOriginalFilename());
+        System.out.println(file.getContentType());
+
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("Audio file is required");
         }
@@ -230,8 +258,51 @@ public class ConsultationService {
         return originalFilename.substring(dotIndex).replaceAll("[^A-Za-z0-9.]", "");
     }
 
-    public void processNotes(NotesRequest request){
-        System.out.println(request);
+
+
+    @Transactional
+    public NotesResponse processNotes(NotesRequest request, UUID tenantId, UUID appUserId, UUID consultationId){
+
+        Tenant tenant = tenantRepository.findById(tenantId)
+                .orElseThrow(() -> new EntityNotFoundException("Tenant not found!"));
+
+        AppUser appUser = appUserRepository.findByIdAndTenant_Id(appUserId, tenantId)
+                .orElseThrow(() -> new EntityNotFoundException("App user not found!"));
+
+        Consultation consultation = consultationRepository.findByIdAndTenant_Id(consultationId, tenantId)
+                .orElseThrow(() -> new EntityNotFoundException("Consultation not found!"));
+
+        // add clinical note to db
+        ConsultationNotes notes = ConsultationNotes.create(
+                tenant,
+                consultation,
+                appUser,
+                request.reason(),
+                request.history(),
+                request.objective(),
+                request.assessment(),
+                request.plan()
+        );
+
+        ConsultationNotes savedNotes = consultationNotesRepository.save(notes);
+
+        ProcessingJob savedJob =  processingJobRepository.save(new ProcessingJob(
+                tenant,
+                consultation,
+                savedNotes,
+                ProcessingJobType.STRUCTURE_NOTES
+        ));
+
+
+
+        consultation.markProcessingNotes();
+
+        return new NotesResponse(
+                savedNotes.getId(),
+                savedJob.getId(),
+                consultationId,
+                ProcessingJobStatus.PENDING
+        );
     }
 
 }

@@ -13,6 +13,7 @@ import ro.scribemed.backend.audit.application.AuditService;
 import ro.scribemed.backend.identity.domain.AppUser;
 import ro.scribemed.backend.identity.domain.UserSession;
 import ro.scribemed.backend.identity.domain.UserStatus;
+import ro.scribemed.backend.identity.dto.AuthenticatedUserResponse;
 import ro.scribemed.backend.identity.infrastructure.AppUserRepository;
 import ro.scribemed.backend.identity.infrastructure.UserSessionRepository;
 import ro.scribemed.backend.identity.security.SessionTokenService;

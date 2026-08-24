@@ -14,6 +14,7 @@ import ro.scribemed.backend.identity.domain.AppUser;
 import ro.scribemed.backend.identity.infrastructure.AppUserRepository;
 import ro.scribemed.backend.patient.domain.Patient;
 import ro.scribemed.backend.patient.domain.PatientStatus;
+import ro.scribemed.backend.patient.dto.PatientResponse;
 import ro.scribemed.backend.patient.infrastructure.PatientRepository;
 import ro.scribemed.backend.tenancy.domain.Tenant;
 import ro.scribemed.backend.tenancy.infrastructure.TenantRepository;

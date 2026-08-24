@@ -11,8 +11,16 @@ export class SendNotesApiError extends Error {
         this.name = "SendNotesApiError"
     }
 }
+/*
+*  UUID notesId,
+        UUID jobId,
+        UUID consultationId,
+        ProcessingJobStatus status*/
 
 type SendNotesResponse = {
+    notesId: string,
+    jobId: string,
+    consultationId: string,
     status: string
 }
 
@@ -61,6 +69,6 @@ export async function sendNotes (
             response.status
         )
     }
-    console.log(response.json())
+    //console.log(response.json())
     return response.json();
 }

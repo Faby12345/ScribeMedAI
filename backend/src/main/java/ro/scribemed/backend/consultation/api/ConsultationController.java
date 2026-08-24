@@ -13,6 +13,12 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import ro.scribemed.backend.consultation.application.*;
+import ro.scribemed.backend.consultation.dto.AudioUploadResponse;
+import ro.scribemed.backend.consultation.dto.ConsultationResponse;
+import ro.scribemed.backend.consultation.dto.CreateConsultationRequest;
+import ro.scribemed.backend.consultation.dto.NotesRequest;
+import ro.scribemed.backend.consultation.dto.NotesResponse;
+import ro.scribemed.backend.consultation.dto.TranscriptResponse;
 import ro.scribemed.backend.identity.security.CurrentUser;
 
 @RestController
@@ -91,13 +97,19 @@ public class ConsultationController {
         return consultationService.getTranscript(consultationId, currentUser.tenantId());
     }
 
-    @PostMapping("{consultationId}/notes")
+    @PostMapping("/{consultationId}/notes")
     ResponseEntity<NotesResponse> processNotes(
             @AuthenticationPrincipal CurrentUser currentUser,
             @PathVariable UUID consultationId,
             @RequestBody NotesRequest notesRequest
     ) {
-        consultationService.processNotes(notesRequest);
-        return ResponseEntity.ok(new NotesResponse("recived"));
+        NotesResponse response =  consultationService.processNotes(
+                notesRequest,
+                currentUser.tenantId(),
+                currentUser.userId(),
+                consultationId);
+
+        return ResponseEntity.accepted().body(response);
+
     }
 }

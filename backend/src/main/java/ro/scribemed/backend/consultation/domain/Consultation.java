@@ -95,6 +95,18 @@ public class Consultation {
         status = ConsultationStatus.TRANSCRIPTION_FAILED;
     }
 
+    public void markProcessingNotes() {
+        status = ConsultationStatus.NOTES_PROCESSING;
+    }
+
+    public void markNotesReady() {
+        status = ConsultationStatus.NOTES_READY;
+    }
+
+    public void markNotesFailed() {
+        status = ConsultationStatus.NOTES_FAILED;
+    }
+
     public UUID getId() {
         return id;
     }

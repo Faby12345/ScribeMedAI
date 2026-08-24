@@ -75,6 +75,27 @@ public class ConsultationNotes {
         this.assessment = assessment;
         this.plan = plan;
     }
+    public static ConsultationNotes create(
+            Tenant tenant,
+            Consultation consultation,
+            AppUser createdByUser,
+            String reason,
+            String history,
+            String objective,
+            String assessment,
+            String plan
+    ) {
+        return new ConsultationNotes(
+                tenant,
+                consultation,
+                createdByUser,
+                reason,
+                history,
+                objective,
+                assessment,
+                plan
+        );
+    }
 
     @PrePersist
     void prePersist() {

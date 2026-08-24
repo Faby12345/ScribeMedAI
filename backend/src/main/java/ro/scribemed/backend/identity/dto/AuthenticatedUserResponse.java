@@ -1,4 +1,4 @@
-package ro.scribemed.backend.identity.application;
+package ro.scribemed.backend.identity.dto;
 
 import java.util.UUID;
 

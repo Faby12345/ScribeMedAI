@@ -4,28 +4,34 @@ import java.util.List;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 import ro.scribemed.backend.consultation.application.ClinicalNoteGenerationProvider;
 import ro.scribemed.backend.consultation.application.ClinicalNoteGenerationProviderException;
 import ro.scribemed.backend.consultation.application.ClinicalNoteGenerationResult;
-import ro.scribemed.backend.consultation.application.HuggingFaceChatRequest;
-import ro.scribemed.backend.consultation.application.HuggingFaceChatResponse;
-import ro.scribemed.backend.consultation.application.NotesRequest;
+import ro.scribemed.backend.consultation.infrastructure.dto.HuggingFaceChatRequest;
+import ro.scribemed.backend.consultation.infrastructure.dto.HuggingFaceChatResponse;
+import ro.scribemed.backend.consultation.dto.NotesRequest;
+import ro.scribemed.backend.consultation.dto.TranscriptNoteGenerationRequest;
 
 @Component
 public class HuggingFaceClinicalNoteGenerationProvider implements ClinicalNoteGenerationProvider {
 
     private static final String PROVIDER = "huggingface";
     private static final String MODEL = "Qwen/Qwen3-32B:cheapest";
-    private static final String PROMPT_VERSION = "clinical-note-soap-v1";
+    private static final String DOCTOR_NOTES_PROMPT_VERSION = "clinical-note-soap-from-notes-v1";
+    private static final String TRANSCRIPT_PROMPT_VERSION = "clinical-note-soap-from-transcript-v1";
     private static final String TEMPLATE_VERSION = "soap-v1";
     private static final double TEMPERATURE = 0.0;
     private static final int MAX_TOKENS_TEST_CONNECTION = 5;
     private static final int MAX_TOKENS_NOTES = 1000;
+    private static final Logger log = LoggerFactory.getLogger(HuggingFaceClinicalNoteGenerationProvider.class);
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
@@ -36,6 +42,7 @@ public class HuggingFaceClinicalNoteGenerationProvider implements ClinicalNoteGe
             @Value("${scribemed.llm.huggingface.api-key}") String apiKey
     ) {
         this.objectMapper = objectMapper;
+
         this.restClient = builder
                 .baseUrl("https://router.huggingface.co/v1")
                 .defaultHeader("Authorization", "Bearer " + apiKey)
@@ -79,18 +86,36 @@ public class HuggingFaceClinicalNoteGenerationProvider implements ClinicalNoteGe
     }
 
     @Override
-    public ClinicalNoteGenerationResult generate(NotesRequest rawNotes) {
+    public ClinicalNoteGenerationResult generateFromDoctorNotes(NotesRequest rawNotes) {
+        return generate(
+                doctorNotesSystemPrompt(),
+                doctorNotesUserPrompt(rawNotes),
+                DOCTOR_NOTES_PROMPT_VERSION
+        );
+    }
+
+    @Override
+    public ClinicalNoteGenerationResult generateFromTranscript(TranscriptNoteGenerationRequest transcript) {
+        return generate(
+                transcriptSystemPrompt(),
+                transcriptUserPrompt(transcript),
+                TRANSCRIPT_PROMPT_VERSION
+        );
+    }
+
+    private ClinicalNoteGenerationResult generate(String systemPrompt, String userPrompt, String promptVersion) {
         HuggingFaceChatRequest request = new HuggingFaceChatRequest(
                 MODEL,
                 List.of(
-                        new HuggingFaceChatRequest.Message("system", systemPrompt()),
-                        new HuggingFaceChatRequest.Message("user", userPrompt(rawNotes))
+                        new HuggingFaceChatRequest.Message("system", systemPrompt),
+                        new HuggingFaceChatRequest.Message("user", userPrompt)
                 ),
                 TEMPERATURE,
                 MAX_TOKENS_NOTES
         );
 
         String responseBody;
+
         try {
             responseBody = restClient.post()
                     .uri("/chat/completions")
@@ -98,17 +123,38 @@ public class HuggingFaceClinicalNoteGenerationProvider implements ClinicalNoteGe
                     .body(request)
                     .retrieve()
                     .body(String.class);
+
+        } catch (RestClientResponseException error) {
+
+            log.error(
+                    "clinical_note_generation_provider_request_failed provider={} status={}",
+                    PROVIDER,
+                    error.getStatusCode()
+            );
+
+            throw new ClinicalNoteGenerationProviderException(
+                    "HUGGINGFACE_REQUEST_FAILED",
+                    "Clinical note generation request failed"
+            );
+
         } catch (RestClientException error) {
+
+            log.error(
+                    "clinical_note_generation_provider_communication_failed provider={} errorType={}",
+                    PROVIDER,
+                    error.getClass().getSimpleName()
+            );
+
             throw new ClinicalNoteGenerationProviderException(
                     "HUGGINGFACE_REQUEST_FAILED",
                     "Clinical note generation request failed"
             );
         }
 
-        return parseResponse(responseBody);
+        return parseResponse(responseBody, promptVersion);
     }
 
-    private ClinicalNoteGenerationResult parseResponse(String responseBody) {
+    private ClinicalNoteGenerationResult parseResponse(String responseBody, String promptVersion) {
         try {
             JsonNode root = objectMapper.readTree(responseBody);
             String content = root.path("choices")
@@ -136,7 +182,7 @@ public class HuggingFaceClinicalNoteGenerationProvider implements ClinicalNoteGe
             return new ClinicalNoteGenerationResult(
                     PROVIDER,
                     root.path("model").asText(MODEL),
-                    PROMPT_VERSION,
+                    promptVersion,
                     TEMPLATE_VERSION,
                     soapNote,
                     reviewFlags,
@@ -152,7 +198,7 @@ public class HuggingFaceClinicalNoteGenerationProvider implements ClinicalNoteGe
         }
     }
 
-    private String systemPrompt() {
+    private String doctorNotesSystemPrompt() {
         return """
                 Ești un asistent pentru documentație medicală în limba română.
                 Transformă notițele brute ale medicului într-un draft clinic structurat SOAP.
@@ -170,7 +216,27 @@ public class HuggingFaceClinicalNoteGenerationProvider implements ClinicalNoteGe
                 """;
     }
 
-    private String userPrompt(NotesRequest rawNotes) {
+    private String transcriptSystemPrompt() {
+        return """
+                Ești un asistent pentru documentație medicală în limba română.
+                Transformă transcrierea unei consultații medicale într-un draft clinic structurat SOAP.
+                Transcrierea poate conține dialog, repetiții, erori de recunoaștere vocală și informații incomplete.
+                Nu inventa diagnostice, simptome, tratamente, rezultate de examen obiectiv sau recomandări care nu apar în transcriere.
+                Dacă o secțiune nu are suficiente informații, scrie explicit că informația nu este documentată în transcriere.
+                Marchează pentru verificare afirmațiile clinice incerte, medicamentele, dozele, alergiile, valorile numerice și posibilele erori de negație.
+                Răspunde exclusiv cu JSON valid, fără Markdown și fără text în afara JSON-ului.
+                Schema obligatorie:
+                {
+                  "subjective": "string",
+                  "objective": "string",
+                  "assessment": "string",
+                  "plan": "string",
+                  "reviewFlags": ["string"]
+                }
+                """;
+    }
+
+    private String doctorNotesUserPrompt(NotesRequest rawNotes) {
         return """
                 Generează un draft SOAP pe baza următoarelor notițe brute.
 
@@ -194,6 +260,29 @@ public class HuggingFaceClinicalNoteGenerationProvider implements ClinicalNoteGe
                 safe(rawNotes.objective()),
                 safe(rawNotes.assessment()),
                 safe(rawNotes.plan())
+        );
+    }
+
+    private String transcriptUserPrompt(TranscriptNoteGenerationRequest transcript) {
+        return """
+                Generează un draft SOAP pe baza următoarei transcrieri de consultație.
+
+                Limba transcrierii:
+                %s
+
+                Furnizor transcriere:
+                %s
+
+                Model transcriere:
+                %s
+
+                Transcriere:
+                %s
+                """.formatted(
+                safe(transcript.language()),
+                safe(transcript.transcriptionProvider()),
+                safe(transcript.transcriptionModel()),
+                safe(transcript.transcriptText())
         );
     }
 

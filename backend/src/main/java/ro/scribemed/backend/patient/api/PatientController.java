@@ -10,7 +10,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import ro.scribemed.backend.identity.security.CurrentUser;
 import ro.scribemed.backend.patient.application.CreatePatientCommand;
-import ro.scribemed.backend.patient.application.PatientResponse;
+import ro.scribemed.backend.patient.dto.CreatePatientRequest;
+import ro.scribemed.backend.patient.dto.PatientResponse;
 import ro.scribemed.backend.patient.application.PatientService;
 
 @RestController

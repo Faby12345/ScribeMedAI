@@ -1,4 +1,6 @@
-package ro.scribemed.backend.consultation.application;
+package ro.scribemed.backend.consultation.dto;
+
+import ro.scribemed.backend.consultation.domain.ConsultationNotes;
 
 public record NotesRequest (
         String reason,
@@ -8,3 +10,4 @@ public record NotesRequest (
         String plan
 ) {
 }
+

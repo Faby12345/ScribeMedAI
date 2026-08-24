@@ -7,7 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import ro.scribemed.backend.consultation.application.ConsultationResponse;
+import ro.scribemed.backend.consultation.dto.ConsultationResponse;
 import ro.scribemed.backend.consultation.domain.Consultation;
 
 public interface ConsultationRepository extends JpaRepository<Consultation, UUID> {
@@ -16,7 +16,7 @@ public interface ConsultationRepository extends JpaRepository<Consultation, UUID
 
     @Query(
             value = """
-                    select new ro.scribemed.backend.consultation.application.ConsultationResponse(
+                    select new ro.scribemed.backend.consultation.dto.ConsultationResponse(
                         c.id,
                         c.tenant.id,
                         c.patient.id,

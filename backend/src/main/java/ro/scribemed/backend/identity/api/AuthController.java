@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import ro.scribemed.backend.identity.application.AuthService;
-import ro.scribemed.backend.identity.application.AuthenticatedUserResponse;
+import ro.scribemed.backend.identity.dto.AuthenticatedUserResponse;
 import ro.scribemed.backend.identity.application.AuthenticationException;
 import ro.scribemed.backend.identity.application.LoginResult;
 import ro.scribemed.backend.identity.config.SessionCookieProperties;

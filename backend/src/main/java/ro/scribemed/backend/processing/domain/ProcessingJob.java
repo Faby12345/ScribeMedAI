@@ -15,7 +15,18 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import ro.scribemed.backend.consultation.domain.Consultation;
+import ro.scribemed.backend.consultation.domain.ConsultationNotes;
 import ro.scribemed.backend.tenancy.domain.Tenant;
+
+/*
+Simptome debutate progresiv, fără dispnee, durere toracică sau
+alergii medicamentoase cunoscute.
+ A administrat paracetamol ocazional, cu ameliorare parțială.
+ */
+
+/*
+* Pacientul se prezintă pentru tuse seacă,
+* rinoree și subfebrilitate apărute de aproximativ 3 zile.*/
 
 @Entity
 @Table(name = "processing_job")
@@ -32,6 +43,10 @@ public class ProcessingJob {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "consultation_id", nullable = false)
     private Consultation consultation;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_notes_id")
+    private ConsultationNotes sourceNotes;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
@@ -81,6 +96,16 @@ public class ProcessingJob {
         this.status = ProcessingJobStatus.PENDING;
         this.maxAttempts = 3;
         this.nextAttemptAt = Instant.now();
+    }
+
+    public ProcessingJob(
+            Tenant tenant,
+            Consultation consultation,
+            ConsultationNotes sourceNotes,
+            ProcessingJobType jobType
+    ) {
+        this(tenant, consultation, jobType);
+        this.sourceNotes = sourceNotes;
     }
 
     @PrePersist
@@ -137,6 +162,10 @@ public class ProcessingJob {
 
     public Consultation getConsultation() {
         return consultation;
+    }
+
+    public ConsultationNotes getSourceNotes() {
+        return sourceNotes;
     }
 
     public ProcessingJobType getJobType() {

@@ -1,4 +1,4 @@
-package ro.scribemed.backend.consultation.application;
+package ro.scribemed.backend.consultation.dto;
 
 import java.time.Instant;
 import java.util.UUID;

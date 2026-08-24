@@ -12,4 +12,9 @@ public interface ConsultationNotesRepository extends JpaRepository<ConsultationN
             UUID consultationId,
             UUID tenantId
     );
+
+    boolean existsByConsultation_Id(UUID id);
+
+
+
 }

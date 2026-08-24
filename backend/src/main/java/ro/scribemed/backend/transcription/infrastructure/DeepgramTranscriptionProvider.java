@@ -10,7 +10,7 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.util.UriComponentsBuilder;
 import ro.scribemed.backend.transcription.application.TranscriptionProvider;
 import ro.scribemed.backend.transcription.application.TranscriptionProviderException;
-import ro.scribemed.backend.transcription.application.TranscriptionRequest;
+import ro.scribemed.backend.transcription.dto.TranscriptionRequest;
 import ro.scribemed.backend.transcription.application.TranscriptionResult;
 import ro.scribemed.backend.transcription.config.DeepgramTranscriptionProperties;
 

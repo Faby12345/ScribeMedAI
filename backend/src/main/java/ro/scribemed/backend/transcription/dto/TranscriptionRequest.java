@@ -1,4 +1,4 @@
-package ro.scribemed.backend.transcription.application;
+package ro.scribemed.backend.transcription.dto;
 
 public record TranscriptionRequest(
         byte[] audioData,

@@ -3,6 +3,7 @@ package ro.scribemed.backend.processing.application;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,10 +18,12 @@ import ro.scribemed.backend.audio.domain.ConsultationAudio;
 import ro.scribemed.backend.audio.infrastructure.ConsultationAudioRepository;
 import ro.scribemed.backend.consultation.domain.Consultation;
 import ro.scribemed.backend.processing.domain.ProcessingJob;
+import ro.scribemed.backend.processing.domain.ProcessingJobStatus;
+import ro.scribemed.backend.processing.domain.ProcessingJobType;
 import ro.scribemed.backend.processing.infrastructure.ProcessingJobRepository;
 import ro.scribemed.backend.transcription.application.TranscriptionProvider;
 import ro.scribemed.backend.transcription.application.TranscriptionProviderException;
-import ro.scribemed.backend.transcription.application.TranscriptionRequest;
+import ro.scribemed.backend.transcription.dto.TranscriptionRequest;
 import ro.scribemed.backend.transcription.application.TranscriptionResult;
 import ro.scribemed.backend.transcription.domain.ConsultationTranscript;
 import ro.scribemed.backend.transcription.infrastructure.ConsultationTranscriptRepository;
@@ -142,7 +145,9 @@ public class TranscriptionJobWorker {
                 job.getConsultation().getId(),
                 job.getTenant().getId()
         ).ifPresent(ConsultationAudio::markTranscribed);
+
         job.getConsultation().markTranscriptionReady();
+        enqueueTranscriptStructureJobIfNeeded(job);
         job.markSucceeded(Instant.now());
 
         log.info(
@@ -152,6 +157,27 @@ public class TranscriptionJobWorker {
                 job.getId(),
                 result.provider()
         );
+    }
+
+    private void enqueueTranscriptStructureJobIfNeeded(ProcessingJob job) {
+        boolean activeJobExists = processingJobRepository.existsByConsultation_IdAndTenant_IdAndJobTypeAndStatusIn(
+                job.getConsultation().getId(),
+                job.getTenant().getId(),
+                ProcessingJobType.STRUCTURE_TRANSCRIPTION,
+                List.of(
+                        ProcessingJobStatus.PENDING,
+                        ProcessingJobStatus.RUNNING,
+                        ProcessingJobStatus.RETRY
+                )
+        );
+
+        if (!activeJobExists) {
+            processingJobRepository.save(new ProcessingJob(
+                    job.getTenant(),
+                    job.getConsultation(),
+                    ProcessingJobType.STRUCTURE_TRANSCRIPTION
+            ));
+        }
     }
 
     void markFailed(UUID jobId, String errorCode, String safeMessage) {
