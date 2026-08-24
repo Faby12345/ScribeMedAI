@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import {
   GetConsultationApiError,
@@ -17,6 +17,7 @@ import type {
 } from "@/features/consultations/types";
 import { getCurrentUser } from "@/features/auth/api/current-user";
 import { getPatientById } from "@/features/patients/api/get-patient-server";
+import { PatientAvatar } from "@/features/patients/components/patient-avatar";
 import type { Patient } from "@/features/patients/types";
 
 type ConsultationPageProps = {
@@ -94,47 +95,52 @@ export default async function ConsultationPage({
     consultation.patientId,
     requestCookies,
   ).catch(() => null);
+  const patientName = patient
+    ? `${patient.lastName} ${patient.firstName}`.trim()
+    : "Consultație";
 
   return (
     <div className="page-container py-7 sm:py-8">
-      <PageHeader
-        title="Consultație"
-        description="Verifică datele consultației și continuă cu pașii clinici necesari pentru documentare."
-        actions={
-          <>
-            {consultation.status === "NOTES_READY" ? (
-              <ButtonLink href={`/consultations/${consultation.id}/review`}>
-                Revizuiește draftul
+      <div className="mx-auto w-full max-w-6xl">
+        <PageHeader
+          title={patientName}
+          actions={
+            <>
+              {consultation.status === "NOTES_READY" ? (
+                <ButtonLink href={`/consultations/${consultation.id}/review`}>
+                  Revizuiește draftul
+                </ButtonLink>
+              ) : null}
+              <Badge variant={statusVariants[consultation.status]}>
+                {statusLabels[consultation.status]}
+              </Badge>
+              <ButtonLink href="/dashboard" variant="outline">
+                Înapoi la panou
               </ButtonLink>
-            ) : null}
-            <Badge variant={statusVariants[consultation.status]}>
-              {statusLabels[consultation.status]}
-            </Badge>
-            <ButtonLink href="/dashboard" variant="outline">
-              Înapoi la panou
-            </ButtonLink>
-          </>
-        }
-      />
+            </>
+          }
+        />
 
+        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(17rem,20rem)]">
+          <section className="min-w-0">
+            <ConsultationDocumentationFlow
+              consultationId={consultationId}
+              isPatientInformed={Boolean(consultation.patientInformedAt)}
+            />
+          </section>
 
-        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]">
-          <section className="min-w-0 space-y-6">
+          <aside className="min-w-0 space-y-4">
+            <PatientSummary patient={patient} />
             <Card>
-              <CardHeader>
-                <h2 className="section-title">Detalii consultație</h2>
-                <p className="secondary-text">
-                  Starea curentă și pașii disponibili pentru fluxul de lucru.
-                </p>
-              </CardHeader>
-              <CardContent>
-                <dl className="grid gap-4 sm:grid-cols-2">
+              <CardContent className="p-5">
+                <h2 className="section-title">Consultație</h2>
+                <dl className="mt-4 space-y-3">
                   <DetailItem
-                    label="Creată la"
+                    label="Creată"
                     value={formatDateTime(consultation.createdAt)}
                   />
                   <DetailItem
-                    label="Actualizată la"
+                    label="Actualizată"
                     value={formatDateTime(consultation.updatedAt)}
                   />
                   <DetailItem
@@ -145,42 +151,12 @@ export default async function ConsultationPage({
                         : "Neconfirmată"
                     }
                   />
-                  <div>
-                    <dt className="caption-text">Status</dt>
-                    <dd className="mt-1">
-                      <Badge variant={statusVariants[consultation.status]}>
-                        {statusLabels[consultation.status]}
-                      </Badge>
-                    </dd>
-                  </div>
                 </dl>
-              </CardContent>
-            </Card>
-
-            <NextStep consultation={consultation} />
-            <ConsultationDocumentationFlow
-                consultationId={consultationId}
-              isPatientInformed={Boolean(consultation.patientInformedAt)}
-            />
-          </section>
-
-          <aside className="min-w-0 space-y-6">
-            <PatientSummary patient={patient} />
-            <Card variant="muted">
-              <CardHeader>
-                <h2 className="section-title">Medic</h2>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm font-medium text-foreground">
-                  {user.displayName}
-                </p>
-                <p className="mt-1 truncate text-sm text-muted-foreground">
-                  {user.email}
-                </p>
               </CardContent>
             </Card>
           </aside>
         </div>
+      </div>
     </div>
   );
 }
@@ -201,13 +177,16 @@ function PatientSummary({
 
   return (
     <Card>
-      <CardHeader>
-        <h2 className="section-title">Pacient</h2>
-      </CardHeader>
-      <CardContent>
-        <p className="text-base font-semibold text-foreground">
-          {patient.lastName} {patient.firstName}
-        </p>
+      <CardContent className="p-5">
+        <div className="flex items-center gap-3">
+          <PatientAvatar patient={patient} className="size-9" />
+          <div className="min-w-0">
+            <h2 className="section-title">Pacient</h2>
+            <p className="mt-1 truncate text-sm font-semibold text-foreground">
+              {patient.lastName} {patient.firstName}
+            </p>
+          </div>
+        </div>
         <dl className="mt-4 space-y-3">
           <DetailItem
             label="Data nașterii"
@@ -218,40 +197,6 @@ function PatientSummary({
         </dl>
       </CardContent>
     </Card>
-  );
-}
-
-function NextStep({ consultation }: { consultation: Consultation }) {
-  if (consultation.status === "CREATED") {
-    return (
-      <Alert variant="info" title="Următorul pas">
-        Confirmă că pacientul a fost informat înainte de înregistrarea sau
-        încărcarea audio.
-      </Alert>
-    );
-  }
-
-  if (consultation.status === "PATIENT_INFORMED") {
-    return (
-      <Alert variant="success" title="Următorul pas">
-        Pacientul este informat. Poți continua cu înregistrarea sau încărcarea
-        audio.
-      </Alert>
-    );
-  }
-
-  if (consultation.status === "TRANSCRIPTION_FAILED") {
-    return (
-      <Alert variant="error" title="Transcriere eșuată">
-        Verifică fișierul audio și reia procesarea conform fluxului permis.
-      </Alert>
-    );
-  }
-
-  return (
-    <Alert variant="info" title="Status procesare">
-      Consultația este în etapa „{statusLabels[consultation.status]}”.
-    </Alert>
   );
 }
 

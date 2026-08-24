@@ -10,7 +10,7 @@ export function PatientAvatar({ className }: PatientAvatarProps) {
   return (
     <span
       className={cn(
-        "flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-control)]  bg-whitetext-primary",
+        "flex size-10 shrink-0 items-center justify-center text-primary",
         className,
       )}
       aria-hidden="true"

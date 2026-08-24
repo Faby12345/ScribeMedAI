@@ -5,85 +5,21 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  GetConsultationsApiError,
-  getConsultations,
-} from "@/features/consultations/api/get-consultations";
 import { NewConsultationPanel } from "@/features/consultations/components/new-consultation-panel";
-import type {
-  Consultation,
-  ConsultationStatus,
-  PaginatedResponse,
-} from "@/features/consultations/types";
-import { cn } from "@/lib/class-names";
-
-const activityLimit = 50;
-
-const consultationPriority: Record<ConsultationStatus, number> = {
-  TRANSCRIPTION_FAILED: 0,
-  NOTES_FAILED: 1,
-  NOTES_READY: 2,
-  TRANSCRIPTION_READY: 3,
-  NOTES_PROCESSING: 4,
-  TRANSCRIBING: 5,
-  AUDIO_UPLOADED: 6,
-  PATIENT_INFORMED: 7,
-  CREATED: 8,
-};
-
-const statusLabels: Record<ConsultationStatus, string> = {
-  CREATED: "Începută",
-  PATIENT_INFORMED: "Pregătită pentru audio",
-  AUDIO_UPLOADED: "Audio încărcat",
-  TRANSCRIBING: "În transcriere",
-  TRANSCRIPTION_READY: "Gata pentru revizuire",
-  TRANSCRIPTION_FAILED: "Transcriere eșuată",
-  NOTES_PROCESSING: "Draft în generare",
-  NOTES_READY: "Draft disponibil",
-  NOTES_FAILED: "Generare draft eșuată",
-};
-
-const statusVariants: Record<
-  ConsultationStatus,
-  "neutral" | "info" | "processing" | "success" | "warning" | "destructive"
-> = {
-  CREATED: "neutral",
-  PATIENT_INFORMED: "info",
-  AUDIO_UPLOADED: "info",
-  TRANSCRIBING: "processing",
-  TRANSCRIPTION_READY: "warning",
-  TRANSCRIPTION_FAILED: "destructive",
-  NOTES_PROCESSING: "processing",
-  NOTES_READY: "success",
-  NOTES_FAILED: "destructive",
-};
-
-const nextActionLabels: Record<ConsultationStatus, string> = {
-  CREATED: "Continuă",
-  PATIENT_INFORMED: "Continuă",
-  AUDIO_UPLOADED: "Continuă",
-  TRANSCRIBING: "Vezi status",
-  TRANSCRIPTION_READY: "Revizuiește",
-  TRANSCRIPTION_FAILED: "Deschide",
-  NOTES_PROCESSING: "Vezi status",
-  NOTES_READY: "Revizuiește",
-  NOTES_FAILED: "Deschide",
-};
-
-const statusToneClasses: Record<ConsultationStatus, string> = {
-  CREATED: "bg-muted-foreground",
-  PATIENT_INFORMED: "bg-info",
-  AUDIO_UPLOADED: "bg-info",
-  TRANSCRIBING: "bg-info motion-safe:animate-pulse",
-  TRANSCRIPTION_READY: "bg-warning",
-  TRANSCRIPTION_FAILED: "bg-destructive",
-  NOTES_PROCESSING: "bg-info motion-safe:animate-pulse",
-  NOTES_READY: "bg-success",
-  NOTES_FAILED: "bg-destructive",
-};
+import {
+  GetPatientsApiError,
+  getPatients,
+} from "@/features/patients/api/get-patients";
+import { PatientAvatar } from "@/features/patients/components/patient-avatar";
+import {
+  formatDateTime as formatPatientDateTime,
+  patientDisplayName,
+  statusLabels as patientStatusLabels,
+} from "@/features/patients/components/patient-formatters";
+import type { Patient } from "@/features/patients/types";
 
 export function DashboardShell() {
   const [isNewConsultationOpen, setIsNewConsultationOpen] = useState(false);
@@ -91,78 +27,82 @@ export function DashboardShell() {
 
   return (
     <>
-      <div className="mx-auto grid w-full max-w-7xl gap-8 px-4 py-6 sm:px-6 sm:py-8 lg:grid-cols-[minmax(18rem,0.68fr)_minmax(0,1.32fr)] lg:px-8">
+      <div className="mx-auto w-full max-w-7xl space-y-9 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
         <section
           aria-labelledby="ai-workspace-title"
-          className="relative overflow-hidden rounded-xl bg-white/78"
+          className="mx-auto max-w-4xl border-b border-border pb-8 text-center"
         >
-          <div
-            className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,#ffffff_0%,#eef9ff_58%,#ffffff_100%)]"
-            aria-hidden="true"
-          />
-          <div
-            className="pointer-events-none absolute inset-x-6 top-0 h-px bg-[linear-gradient(90deg,transparent,#9fdcf1,transparent)]"
-            aria-hidden="true"
-          />
-          <div className="relative px-1 py-2 sm:px-2 sm:py-4">
+          <div className="mx-auto max-w-2xl">
             <h1
               id="ai-workspace-title"
-              className="max-w-xl text-2xl font-semibold leading-tight tracking-normal text-foreground sm:text-3xl"
+              className="page-title"
             >
-              Ce documentăm acum?
+              Panou clinic
             </h1>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">
-              Selectează pacientul, confirmă identitatea și deschide fluxul de
-              consultație asistat de AI.
+            <p className="secondary-text mx-auto mt-2 max-w-xl">
+              Pornește rapid o consultație sau adaugă pacientul înainte de
+              documentare.
             </p>
+          </div>
 
-            <div className="mt-6">
-              <Button
-                ref={startConsultationButtonRef}
-                type="button"
-                variant="primary"
-                className="w-full sm:w-auto"
-                onClick={() => setIsNewConsultationOpen(true)}
-              >
-                Începe consultația
-              </Button>
-            </div>
+          <div className="mx-auto mt-7 grid max-w-3xl gap-3 sm:grid-cols-2">
+            <Button
+              ref={startConsultationButtonRef}
+              type="button"
+              variant="primary"
+              className="h-auto min-h-28 justify-start p-5 text-left"
+              onClick={() => setIsNewConsultationOpen(true)}
+            >
+              <ConsultationActionIcon />
+              <span className="min-w-0">
+                <span className="block text-base font-semibold">
+                  Consultație nouă
+                </span>
+                <span className="mt-1 block text-sm font-normal opacity-85">
+                  Alege pacientul și deschide fluxul audio.
+                </span>
+              </span>
+            </Button>
 
-            <div className="mt-5 flex flex-wrap gap-x-4 gap-y-2 text-sm">
-              <Link
-                href="/patients/new"
-                className="font-medium text-primary underline-offset-4 transition-colors hover:text-primary-hover hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              >
-                Pacient nou
-              </Link>
-              <Link
-                href="/patients"
-                className="font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              >
-                Registru pacienți
-              </Link>
-            </div>
+            <ButtonLink
+              href="/patients/new"
+              variant="outline"
+              className="h-auto min-h-28 justify-start p-5 text-left"
+            >
+              <PatientActionIcon />
+              <span className="min-w-0">
+                <span className="block text-base font-semibold">
+                  Adaugă pacient
+                </span>
+                <span className="mt-1 block text-sm font-normal text-muted-foreground">
+                  Creează profilul clinic înainte de consultație.
+                </span>
+              </span>
+            </ButtonLink>
           </div>
         </section>
 
-        <section aria-labelledby="activity-title" className="min-w-0">
+        <section
+          aria-labelledby="recent-patients-title"
+          className="mx-auto w-full max-w-4xl"
+        >
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 id="activity-title" className="section-title">
-                Activitate care cere atenție
+              <h2 id="recent-patients-title" className="section-title">
+                Pacienți recenți
               </h2>
               <p className="secondary-text mt-1">
-                Consultațiile recente sunt afișate după acțiunea necesară.
+                Ultimii 10 pacienți actualizați în registrul clinic.
               </p>
             </div>
             <Link
-              href="/consultations"
+              href="/patients"
               className="text-sm font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
-              Toate consultațiile
+              Toți pacienții
             </Link>
           </div>
-          <ConsultationActivity />
+          <RecentPatientsList />
         </section>
       </div>
 
@@ -175,9 +115,8 @@ export function DashboardShell() {
   );
 }
 
-function ConsultationActivity() {
-  const [consultationsPage, setConsultationsPage] =
-    useState<PaginatedResponse<Consultation> | null>(null);
+function RecentPatientsList() {
+  const [patients, setPatients] = useState<Patient[]>([]);
   const [retryKey, setRetryKey] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -185,28 +124,25 @@ function ConsultationActivity() {
   useEffect(() => {
     let isActive = true;
 
-    async function loadConsultations() {
+    async function loadPatients() {
       setIsLoading(true);
       setError(null);
 
       try {
-        const nextPage = await getConsultations({
-          page: 0,
-          size: activityLimit,
-        });
+        const nextPatients = await getPatients();
 
         if (isActive) {
-          setConsultationsPage(nextPage);
+          setPatients(nextPatients);
         }
       } catch (loadError) {
         if (!isActive) {
           return;
         }
 
-        if (loadError instanceof GetConsultationsApiError) {
+        if (loadError instanceof GetPatientsApiError) {
           setError(loadError.message);
         } else {
-          setError("Activitatea consultațiilor nu a putut fi încărcată.");
+          setError("Lista pacienților recenți nu a putut fi încărcată.");
         }
       } finally {
         if (isActive) {
@@ -215,40 +151,30 @@ function ConsultationActivity() {
       }
     }
 
-    loadConsultations();
+    loadPatients();
 
     return () => {
       isActive = false;
     };
   }, [retryKey]);
 
-  const prioritizedConsultations = useMemo(() => {
-    if (!consultationsPage) {
-      return [];
-    }
-
-    return [...consultationsPage.content].sort((first, second) => {
-      const priorityDifference =
-        consultationPriority[first.status] - consultationPriority[second.status];
-
-      if (priorityDifference !== 0) {
-        return priorityDifference;
-      }
-
-      return (
-        new Date(second.createdAt).getTime() -
-        new Date(first.createdAt).getTime()
-      );
-    });
-  }, [consultationsPage]);
+  const recentPatients = useMemo(() => {
+    return [...patients]
+      .sort(
+        (first, second) =>
+          new Date(second.updatedAt).getTime() -
+          new Date(first.updatedAt).getTime(),
+      )
+      .slice(0, 10);
+  }, [patients]);
 
   if (isLoading) {
-    return <ActivitySkeleton />;
+    return <RecentPatientsSkeleton />;
   }
 
   if (error) {
     return (
-      <Alert variant="error" title="Nu am putut încărca activitatea">
+      <Alert variant="error" title="Nu am putut încărca pacienții recenți">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <span>{error}</span>
           <Button
@@ -264,106 +190,137 @@ function ConsultationActivity() {
     );
   }
 
-  if (!consultationsPage || consultationsPage.totalElements === 0) {
+  if (recentPatients.length === 0) {
     return (
       <EmptyState
-        title="Nu există consultații încă."
-        description="Începe cu pacientul potrivit. Consultațiile create vor apărea aici pentru continuare și revizuire."
+        title="Nu există pacienți încă."
+        description="Adaugă primul pacient pentru a putea crea consultații și documente clinice."
+        action={
+          <ButtonLink href="/patients/new">
+            Adaugă pacient
+          </ButtonLink>
+        }
       />
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-xl bg-white/82">
-      <ul className="divide-y divide-border/75 border-y border-border/75">
-        {prioritizedConsultations.map((consultation) => (
-          <ActivityItem key={consultation.id} consultation={consultation} />
+    <div className="overflow-hidden rounded-[var(--radius-surface)] border border-border bg-surface shadow-surface">
+      <ul className="divide-y divide-border">
+        {recentPatients.map((patient) => (
+          <RecentPatientItem key={patient.id} patient={patient} />
         ))}
       </ul>
     </div>
   );
 }
 
-function ActivityItem({ consultation }: { consultation: Consultation }) {
+function RecentPatientItem({ patient }: { patient: Patient }) {
   return (
     <li>
       <Link
-        href={`/consultations/${consultation.id}`}
-        className="grid gap-3 px-1 py-4 transition-colors hover:bg-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-3"
+        href={`/patients/${patient.id}`}
+        className="grid gap-3 px-4 py-4 transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
       >
-        <div className="min-w-0">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <StatusDot status={consultation.status} />
+        <div className="flex min-w-0 items-center gap-3">
+          <PatientAvatar patient={patient} className="size-9" />
+          <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-foreground">
-              {formatPatientName(consultation)}
+              {patientDisplayName(patient)}
             </p>
-            <Badge variant={statusVariants[consultation.status]}>
-              {statusLabels[consultation.status]}
-            </Badge>
+            <p className="caption-text mt-1 truncate">
+              {patient.phone || patient.email || "Contact nespecificat"}
+            </p>
           </div>
-          <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-            <ActivityMeta label="Dată" value={formatDateTime(consultation.createdAt)} />
-            <ActivityMeta
-              label="Actualizare"
-              value={formatDateTime(consultation.updatedAt)}
-            />
-          </dl>
         </div>
 
-        <span className="inline-flex h-9 items-center justify-center rounded-[var(--radius-control)] border border-border bg-white px-3 text-sm font-medium text-foreground">
-          {nextActionLabels[consultation.status]}
-        </span>
+        <div className="flex items-center gap-3 sm:justify-end">
+          <Badge variant={patient.status === "ACTIVE" ? "success" : "neutral"}>
+            {patientStatusLabels[patient.status]}
+          </Badge>
+          <span className="caption-text hidden sm:inline">
+            {formatPatientDateTime(patient.updatedAt)}
+          </span>
+        </div>
       </Link>
     </li>
   );
 }
 
-function ActivityMeta({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex gap-1">
-      <dt>{label}:</dt>
-      <dd className="text-foreground">{value}</dd>
-    </div>
-  );
-}
-
-function StatusDot({ status }: { status: ConsultationStatus }) {
+function ConsultationActionIcon() {
   return (
     <span
-      className={cn("size-2 rounded-full", statusToneClasses[status])}
+      className="flex size-10 shrink-0 items-center justify-center"
       aria-hidden="true"
-    />
+    >
+      <svg
+        className="size-6"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      >
+        <path d="M7.75 3.75h6.7l3.8 3.8v12.7H7.75a2 2 0 0 1-2-2V5.75a2 2 0 0 1 2-2Z" />
+        <path d="M14.25 3.9v3.6a1 1 0 0 0 1 1h3.1" />
+        <path d="M9.25 12.25h5.5" />
+        <path d="M9.25 15.75h4.25" />
+      </svg>
+    </span>
   );
 }
 
-function ActivitySkeleton() {
+function PatientActionIcon() {
+  return (
+    <span
+      className="flex size-10 shrink-0 items-center justify-center text-primary"
+      aria-hidden="true"
+    >
+      <svg
+        className="size-6"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      >
+        <path d="M12 12.25a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
+        <path d="M4.75 20.25a7.25 7.25 0 0 1 14.5 0" />
+        <path d="M19.25 5.75v4.5" />
+        <path d="M21.5 8h-4.5" />
+      </svg>
+    </span>
+  );
+}
+
+function RecentPatientsSkeleton() {
   return (
     <div
-      className="overflow-hidden rounded-xl bg-white/82"
+      className="overflow-hidden rounded-[var(--radius-surface)] border border-border bg-surface shadow-surface"
       aria-busy="true"
     >
-      <div className="divide-y divide-border/75 border-y border-border/75">
+      <div className="divide-y divide-border">
         {Array.from({ length: 5 }, (_, index) => (
-          <div key={index} className="grid gap-3 px-4 py-4 sm:grid-cols-[1fr_8rem]">
-            <Skeleton className="h-10" />
-            <Skeleton className="h-9" />
+          <div
+            key={index}
+            className="grid gap-3 px-4 py-4 sm:grid-cols-[minmax(0,1fr)_8rem]"
+          >
+            <div className="flex items-center gap-3">
+              <Skeleton className="size-9" />
+              <div className="min-w-0 flex-1">
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="mt-2 h-3 w-28" />
+              </div>
+            </div>
+            <Skeleton className="h-8" />
           </div>
         ))}
       </div>
       <p className="secondary-text border-t border-border px-4 py-3">
-        Se încarcă activitatea consultațiilor...
+        Se încarcă pacienții recenți...
       </p>
     </div>
   );
-}
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("ro-RO", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
-
-function formatPatientName(consultation: Consultation) {
-  return `${consultation.patientLastName} ${consultation.patientFirstName}`.trim();
 }

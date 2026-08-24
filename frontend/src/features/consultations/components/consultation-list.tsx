@@ -247,17 +247,9 @@ function ConsultationListItem({
                 {formatPatientName(consultation)}
               </p>
             </div>
+            <p className="caption-text mt-1">Consultație clinică</p>
           </div>
         </div>
-
-        {/*<div className="min-w-0">*/}
-          {/*<div className="flex flex-wrap items-center gap-2">
-            <p className="truncate text-sm font-semibold text-foreground">
-              {formatPatientName(consultation)}
-            </p>
-          </div>*/}
-          {/*<p className="caption-text mt-1">Consultație clinică</p>*/}
-        {/*</div>*/}
 
         <div>
           <Badge variant={statusVariants[consultation.status]}>
