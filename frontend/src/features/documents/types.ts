@@ -10,7 +10,7 @@ export type DocumentReviewDocument = {
   versionId: string;
   versionNumber: number;
   versionStatus: "DRAFT" | "APPROVED" | "SUPERSEDED";
-  source: "AI_GENERATED" | "DOCTOR_EDITED" | "IMPORTED";
+  source: "AI_GENERATED" | "DOCTOR_EDITED" | "REGENERATED" | "CORRECTION";
   draft: SoapDraft;
   reviewFlags: string[];
   aiProvider: string | null;
@@ -25,4 +25,16 @@ export type DocumentReviewDocument = {
     transcriptText: string;
     createdAt: string | null;
   };
+};
+
+export type PatientDocumentSummary = {
+  documentId: string;
+  consultationId: string;
+  documentType: string;
+  status: "DRAFT" | "APPROVED" | "ARCHIVED";
+  currentVersionNumber: number;
+  consultationCreatedAt: string;
+  documentCreatedAt: string;
+  documentUpdatedAt: string;
+  approvedAt: string | null;
 };
