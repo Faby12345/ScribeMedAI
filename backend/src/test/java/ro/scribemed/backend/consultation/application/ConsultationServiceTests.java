@@ -3,6 +3,7 @@ package ro.scribemed.backend.consultation.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -30,7 +31,12 @@ import ro.scribemed.backend.audio.infrastructure.ConsultationAudioRepository;
 import ro.scribemed.backend.audit.application.AuditService;
 import ro.scribemed.backend.consultation.domain.Consultation;
 import ro.scribemed.backend.consultation.domain.ConsultationStatus;
+import ro.scribemed.backend.consultation.dto.AudioUploadResponse;
+import ro.scribemed.backend.consultation.dto.ConsultationResponse;
+import ro.scribemed.backend.consultation.dto.CreateConsultationRequest;
+import ro.scribemed.backend.consultation.infrastructure.ConsultationNotesRepository;
 import ro.scribemed.backend.consultation.infrastructure.ConsultationRepository;
+import ro.scribemed.backend.consultation.infrastructure.HuggingFaceClinicalNoteGenerationProvider;
 import ro.scribemed.backend.identity.domain.AppUser;
 import ro.scribemed.backend.identity.domain.UserRole;
 import ro.scribemed.backend.identity.domain.UserStatus;
@@ -56,6 +62,7 @@ class ConsultationServiceTests {
     private final ConsultationTranscriptRepository transcriptRepository = mock(ConsultationTranscriptRepository.class);
     private final AudioStorageService audioStorageService = mock(AudioStorageService.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final ConsultationNotesRepository consultationNotesRepository = mock(ConsultationNotesRepository.class);
 
     private final ConsultationService consultationService = new ConsultationService(
             consultationRepository,
@@ -67,7 +74,8 @@ class ConsultationServiceTests {
             transcriptRepository,
             audioStorageService,
             auditService,
-            25_000_000
+            25_000_000,
+            consultationNotesRepository
     );
 
     @Test
@@ -146,6 +154,7 @@ class ConsultationServiceTests {
         );
         Patient patient = new Patient(tenant, "Ana", "Ionescu", null, null, null, null);
         Consultation consultation = new Consultation(tenant, patient, doctor);
+        consultation.markPatientInformed(Instant.now());
         MockMultipartFile file = new MockMultipartFile(
                 "file",
                 "sample.webm",
@@ -177,6 +186,164 @@ class ConsultationServiceTests {
         assertThat(consultation.getStatus()).isEqualTo(ConsultationStatus.AUDIO_UPLOADED);
         assertThat(jobCaptor.getValue().getJobType()).isEqualTo(ProcessingJobType.TRANSCRIPTION);
         assertThat(response.status()).isEqualTo(ConsultationStatus.AUDIO_UPLOADED);
+    }
+
+    @Test
+    void uploadAudioRequiresPatientInformedConfirmation() throws Exception {
+        UUID tenantId = UUID.randomUUID();
+        UUID actorUserId = UUID.randomUUID();
+        UUID consultationId = UUID.randomUUID();
+        Tenant tenant = new Tenant("Demo Clinic", TenantStatus.ACTIVE);
+        AppUser doctor = new AppUser(
+                tenant,
+                "doctor@example.com",
+                "hash",
+                "Dr. Demo",
+                UserRole.DOCTOR,
+                UserStatus.ACTIVE
+        );
+        Patient patient = new Patient(tenant, "Ana", "Ionescu", null, null, null, null);
+        Consultation consultation = new Consultation(tenant, patient, doctor);
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "sample.webm",
+                "audio/webm",
+                "audio".getBytes()
+        );
+        when(consultationRepository.findByIdAndTenant_Id(consultationId, tenantId))
+                .thenReturn(Optional.of(consultation));
+        when(appUserRepository.findByIdAndTenant_Id(actorUserId, tenantId)).thenReturn(Optional.of(doctor));
+
+        assertThatThrownBy(() -> consultationService.uploadAudio(
+                consultationId,
+                tenantId,
+                actorUserId,
+                file
+        )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Patient informed confirmation is required");
+
+        verify(audioStorageService, never()).store(any(), any(), anyLong());
+        verify(audioRepository, never()).save(any());
+        verify(processingJobRepository, never()).save(any());
+    }
+
+    @Test
+    void uploadAudioRequiresTenantOwnedConsultation() throws Exception {
+        UUID tenantId = UUID.randomUUID();
+        UUID actorUserId = UUID.randomUUID();
+        UUID consultationId = UUID.randomUUID();
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "sample.webm",
+                "audio/webm",
+                "audio".getBytes()
+        );
+        when(consultationRepository.findByIdAndTenant_Id(consultationId, tenantId))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> consultationService.uploadAudio(
+                consultationId,
+                tenantId,
+                actorUserId,
+                file
+        )).isInstanceOf(EntityNotFoundException.class);
+
+        verify(audioStorageService, never()).store(any(), any(), anyLong());
+        verify(audioRepository, never()).save(any());
+        verify(processingJobRepository, never()).save(any());
+    }
+
+    @Test
+    void uploadAudioRejectsUnsupportedContentType() throws Exception {
+        UUID tenantId = UUID.randomUUID();
+        UUID actorUserId = UUID.randomUUID();
+        UUID consultationId = UUID.randomUUID();
+        Tenant tenant = new Tenant("Demo Clinic", TenantStatus.ACTIVE);
+        AppUser doctor = new AppUser(
+                tenant,
+                "doctor@example.com",
+                "hash",
+                "Dr. Demo",
+                UserRole.DOCTOR,
+                UserStatus.ACTIVE
+        );
+        Patient patient = new Patient(tenant, "Ana", "Ionescu", null, null, null, null);
+        Consultation consultation = new Consultation(tenant, patient, doctor);
+        consultation.markPatientInformed(Instant.now());
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "sample.txt",
+                "text/plain",
+                "audio".getBytes()
+        );
+        when(consultationRepository.findByIdAndTenant_Id(consultationId, tenantId))
+                .thenReturn(Optional.of(consultation));
+        when(appUserRepository.findByIdAndTenant_Id(actorUserId, tenantId)).thenReturn(Optional.of(doctor));
+
+        assertThatThrownBy(() -> consultationService.uploadAudio(
+                consultationId,
+                tenantId,
+                actorUserId,
+                file
+        )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Audio file type is not supported");
+
+        verify(audioStorageService, never()).store(any(), any(), anyLong());
+        verify(audioRepository, never()).save(any());
+        verify(processingJobRepository, never()).save(any());
+    }
+
+    @Test
+    void uploadAudioRejectsOversizedFile() throws Exception {
+        UUID tenantId = UUID.randomUUID();
+        UUID actorUserId = UUID.randomUUID();
+        UUID consultationId = UUID.randomUUID();
+        Tenant tenant = new Tenant("Demo Clinic", TenantStatus.ACTIVE);
+        AppUser doctor = new AppUser(
+                tenant,
+                "doctor@example.com",
+                "hash",
+                "Dr. Demo",
+                UserRole.DOCTOR,
+                UserStatus.ACTIVE
+        );
+        Patient patient = new Patient(tenant, "Ana", "Ionescu", null, null, null, null);
+        Consultation consultation = new Consultation(tenant, patient, doctor);
+        consultation.markPatientInformed(Instant.now());
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "sample.webm",
+                "audio/webm",
+                "audio".getBytes()
+        );
+        ConsultationService serviceWithSmallAudioLimit = new ConsultationService(
+                consultationRepository,
+                patientRepository,
+                appUserRepository,
+                tenantRepository,
+                audioRepository,
+                processingJobRepository,
+                transcriptRepository,
+                audioStorageService,
+                auditService,
+                3,
+                consultationNotesRepository
+        );
+        when(consultationRepository.findByIdAndTenant_Id(consultationId, tenantId))
+                .thenReturn(Optional.of(consultation));
+        when(appUserRepository.findByIdAndTenant_Id(actorUserId, tenantId)).thenReturn(Optional.of(doctor));
+
+        assertThatThrownBy(() -> serviceWithSmallAudioLimit.uploadAudio(
+                consultationId,
+                tenantId,
+                actorUserId,
+                file
+        )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Audio file is too large");
+
+        verify(audioStorageService, never()).store(any(), any(), anyLong());
+        verify(audioRepository, never()).save(any());
+        verify(processingJobRepository, never()).save(any());
     }
 
     @Test

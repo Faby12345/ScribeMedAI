@@ -1,4 +1,4 @@
-package ro.scribemed.backend.consultation.application;
+package ro.scribemed.backend.consultation.infrastructure.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

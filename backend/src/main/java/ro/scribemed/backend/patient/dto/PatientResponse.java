@@ -1,4 +1,4 @@
-package ro.scribemed.backend.patient.application;
+package ro.scribemed.backend.patient.dto;
 
 import java.time.Instant;
 import java.time.LocalDate;

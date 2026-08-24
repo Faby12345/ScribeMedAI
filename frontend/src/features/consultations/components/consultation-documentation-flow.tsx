@@ -7,6 +7,11 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox, Input, Textarea } from "@/components/ui/input";
 import { cn } from "@/lib/class-names";
+import {
+  confirmPatientInformed,
+  ConfirmPatientInformedApiError,
+} from "@/features/consultations/api/confirm-patient-informed";
+import { sendAudio, SendAudioApiError } from "@/features/consultations/api/send-audio";
 import {sendNotes, SendNotesApiError} from "@/features/consultations/api/send-notes";
 
 type DocumentationSource = "audio" | "notes";
@@ -57,7 +62,8 @@ export function ConsultationDocumentationFlow({
   const [audioMode, setAudioMode] = useState<AudioMode>("record");
   const [patientInformed, setPatientInformed] = useState(isPatientInformed);
   const [notes, setNotes] = useState<ClinicalNotes>(emptyNotes);
-  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [selectedAudioFile, setSelectedAudioFile] = useState<File | null>(null);
+  const [recordedAudioBlob, setRecordedAudioBlob] = useState<Blob | null>(null);
   const [recordingState, setRecordingState] = useState<
     "idle" | "recording" | "recorded"
   >("idle");
@@ -77,8 +83,8 @@ export function ConsultationDocumentationFlow({
   const canSubmit =
     source === "audio"
       ? audioMode === "record"
-        ? recordingState === "recorded"
-        : Boolean(selectedFileName)
+        ? recordingState === "recorded" && Boolean(recordedAudioBlob)
+        : Boolean(selectedAudioFile)
       : hasNotes;
 
   useEffect(() => {
@@ -130,13 +136,15 @@ export function ConsultationDocumentationFlow({
           window.URL.revokeObjectURL(recordingUrl);
         }
 
+        setRecordedAudioBlob(audioBlob);
         setRecordingUrl(nextUrl);
         setRecordingState("recorded");
         stream.getTracks().forEach((track) => track.stop());
       });
 
       mediaRecorderRef.current = recorder;
-      setSelectedFileName(null);
+      setSelectedAudioFile(null);
+      setRecordedAudioBlob(null);
       setRecordingUrl(null);
       setRecordingSeconds(0);
       setRecordingState("recording");
@@ -164,7 +172,8 @@ export function ConsultationDocumentationFlow({
     }
 
     setRecordingUrl(null);
-    setSelectedFileName(null);
+    setSelectedAudioFile(null);
+    setRecordedAudioBlob(null);
     setRecordingSeconds(0);
     setRecordingState("idle");
     setRecordingError(null);
@@ -190,10 +199,11 @@ export function ConsultationDocumentationFlow({
 
     setIsSubmitting(true);
 
-    if(source == "notes"){
+    if(source === "notes"){
 
       try {
-        await sendNotes(consultationId, notes);
+        const response = await sendNotes(consultationId, notes);
+        console.log(response)
         router.push("/dashboard")
         router.refresh()
       } catch (error) {
@@ -207,12 +217,39 @@ export function ConsultationDocumentationFlow({
       return;
 
     } else {
-      console.log("this is audio")
+      const audioFile =
+        audioMode === "upload"
+          ? selectedAudioFile
+          : recordedAudioBlob
+            ? new File([recordedAudioBlob], "consultatie.webm", {
+                type: recordedAudioBlob.type || "audio/webm",
+              })
+            : null;
+
+      if (!audioFile) {
+        setRecordingError("Alege sau înregistrează un fișier audio înainte de trimitere.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      try {
+        if (!isPatientInformed) {
+          await confirmPatientInformed(consultationId);
+        }
+
+        await sendAudio(consultationId, audioFile);
+        router.push("/dashboard");
+        router.refresh();
+      } catch (error) {
+        setRecordingError(
+          error instanceof SendAudioApiError ||
+            error instanceof ConfirmPatientInformedApiError
+            ? error.message
+            : "Audio-ul nu a putut fi trimis. Încearcă din nou.",
+        );
+        setIsSubmitting(false);
+      }
     }
-
-
-
-
   }
 
   return (
@@ -261,12 +298,13 @@ export function ConsultationDocumentationFlow({
             recordingSeconds={recordingSeconds}
             recordingState={recordingState}
             recordingUrl={recordingUrl}
-            selectedFileName={selectedFileName}
+            selectedFileName={selectedAudioFile?.name ?? null}
             source={source}
             onAudioModeChange={setAudioMode}
             onBack={() => setStep("source")}
-            onFileSelected={(fileName) => {
-              setSelectedFileName(fileName);
+            onFileSelected={(file) => {
+              setSelectedAudioFile(file);
+              setRecordedAudioBlob(null);
               setRecordingUrl(null);
               setRecordingState("idle");
             }}
@@ -466,7 +504,7 @@ function CaptureStep({
   source: DocumentationSource;
   onAudioModeChange: (mode: AudioMode) => void;
   onBack: () => void;
-  onFileSelected: (fileName: string) => void;
+  onFileSelected: (file: File) => void;
   onNoteChange: (field: keyof ClinicalNotes, value: string) => void;
   onResetAudio: () => void;
   onStartRecording: () => void;
@@ -549,7 +587,7 @@ function AudioCapture({
   recordingUrl: string | null;
   selectedFileName: string | null;
   onAudioModeChange: (mode: AudioMode) => void;
-  onFileSelected: (fileName: string) => void;
+  onFileSelected: (file: File) => void;
   onResetAudio: () => void;
   onStartRecording: () => void;
   onStopRecording: () => void;
@@ -637,7 +675,7 @@ function AudioCapture({
             onChange={(event) => {
               const file = event.target.files?.[0];
               if (file) {
-                onFileSelected(file.name);
+                onFileSelected(file);
               }
             }}
           />

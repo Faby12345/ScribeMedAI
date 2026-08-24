@@ -6,7 +6,7 @@ import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import ro.scribemed.backend.patient.application.PatientResponse;
+import ro.scribemed.backend.patient.dto.PatientResponse;
 import ro.scribemed.backend.patient.domain.Patient;
 import ro.scribemed.backend.patient.domain.PatientStatus;
 
@@ -17,7 +17,7 @@ public interface PatientRepository extends JpaRepository<Patient, UUID> {
     List<Patient> findByTenant_IdAndStatusOrderByLastNameAscFirstNameAsc(UUID tenantId, PatientStatus status);
 
     @Query("""
-      select new ro.scribemed.backend.patient.application.PatientResponse(
+      select new ro.scribemed.backend.patient.dto.PatientResponse(
           p.id,
           p.tenant.id,
           p.firstName,
