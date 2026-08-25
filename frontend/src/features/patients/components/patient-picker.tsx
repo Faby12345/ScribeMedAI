@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -132,15 +131,12 @@ export default function PatientPicker({
   return (
     <div className="space-y-4">
       <label className="block space-y-2">
-        <span className="text-sm font-medium text-foreground">
-          Caută pacient
-        </span>
         <Input
           ref={searchInputRef}
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Nume, telefon sau email"
+          placeholder="Cauta pacient dupa: nume, telefon sau email"
           aria-label="Caută pacient în lista încărcată"
         />
       </label>
@@ -212,12 +208,8 @@ function PatientPickerItem({
           <p className="truncate text-sm font-semibold text-foreground">
             {patient.lastName} {patient.firstName}
           </p>
-          <Badge variant={patient.status === "ACTIVE" ? "info" : "neutral"}>
-            {patient.status === "ACTIVE" ? "Activ" : "Arhivat"}
-          </Badge>
         </div>
         <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-          <PatientMeta label="Data nașterii" value={patient.birthDate} />
           {secondaryIdentifier ? (
             <PatientMeta
               label={secondaryIdentifier.label}
@@ -229,11 +221,11 @@ function PatientPickerItem({
       {patient.status === "ACTIVE" ? (
         <Button
           type="button"
-          variant="outline"
+          variant="primary"
           size="sm"
           onClick={() => onSelectPatient(patient)}
         >
-          Selectează pacientul
+          Selectează
         </Button>
       ) : (
         <p className="text-sm text-muted-foreground">
