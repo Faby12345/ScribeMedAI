@@ -537,11 +537,11 @@ function CaptureStep({
       )}
 
       <div className="flex min-w-0 flex-col gap-3 border-t border-border/70 pt-4 md:flex-row md:items-center md:justify-between">
-        <p className="secondary-text max-w-xl">
+        <p className="secondary-text min-w-0 max-w-xl">
           După trimitere revii în panou. Transcrierea și generarea SOAP vor
           continua în fundal când backendul va conecta acest pas.
         </p>
-        <div className="flex w-full min-w-0 flex-col-reverse gap-2 sm:flex-row md:w-auto">
+        <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end md:w-auto md:shrink-0">
           <Button
             type="button"
             variant="outline"

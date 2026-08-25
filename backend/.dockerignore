@@ -1,0 +1,13 @@
+.env
+.idea/
+target/
+var/
+cookies.txt
+*.log
+.DS_Store
+
+.git/
+.gitignore
+
+HELP.md
+mvnw.cmd

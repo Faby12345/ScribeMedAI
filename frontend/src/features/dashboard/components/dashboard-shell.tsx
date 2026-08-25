@@ -235,9 +235,6 @@ function RecentPatientItem({ patient }: { patient: Patient }) {
         </div>
 
         <div className="flex items-center gap-3 sm:justify-end">
-          <Badge variant={patient.status === "ACTIVE" ? "success" : "neutral"}>
-            {patientStatusLabels[patient.status]}
-          </Badge>
           <span className="caption-text hidden sm:inline">
             {formatPatientDateTime(patient.updatedAt)}
           </span>

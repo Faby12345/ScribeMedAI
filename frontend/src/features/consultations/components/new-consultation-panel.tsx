@@ -10,7 +10,6 @@ import {
 } from "react";
 
 import { Alert } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   CreateConsultationApiError,
@@ -160,9 +159,7 @@ export function NewConsultationPanel({
         <header className="border-b border-border px-5 py-4 sm:px-6">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <Badge variant={isCreatingConsultation ? "processing" : "info"}>
-                {isCreatingConsultation ? "Se creează" : "În pregătire"}
-              </Badge>
+
               <h2 id="new-consultation-title" className="mt-3 text-xl font-semibold text-foreground">
                 Consultație nouă
               </h2>
@@ -174,12 +171,26 @@ export function NewConsultationPanel({
               ref={closeButtonRef}
               type="button"
               variant="ghost"
-              size="sm"
+              size="icon"
+              className="bg-transparent text-muted-foreground shadow-none hover:border-border hover:bg-surface hover:text-foreground active:bg-surface-muted"
               onClick={handleClose}
               disabled={isCreatingConsultation}
               aria-label="Închide panoul pentru consultație nouă"
             >
-              Închide
+              <svg
+                aria-hidden="true"
+                className="size-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+              </svg>
+              <span className="sr-only">Închide</span>
             </Button>
           </div>
         </header>
@@ -273,12 +284,6 @@ function SearchPatientStep({
         <div className="space-y-5">
           <section aria-labelledby="patient-search-title">
             <div className="mb-4">
-              <h3 id="patient-search-title" className="section-title">
-                Alege pacientul
-              </h3>
-              <p className="secondary-text mt-1">
-                Caută un pacient existent sau adaugă unul nou.
-              </p>
             </div>
 
             <PatientPicker
@@ -295,7 +300,7 @@ function SearchPatientStep({
         <div className="flex justify-end">
           <Button
             type="button"
-            variant="outline"
+            variant="success"
             onClick={onCreatePatient}
             disabled={isCreatingConsultation}
           >
@@ -363,7 +368,6 @@ function ConfirmConsultationDialog({
         tabIndex={-1}
         onKeyDown={handleConfirmKeyDown}
       >
-        <Badge variant="warning">Confirmare necesară</Badge>
         <h3
           id="confirm-consultation-title"
           className="mt-3 text-lg font-semibold text-foreground"
