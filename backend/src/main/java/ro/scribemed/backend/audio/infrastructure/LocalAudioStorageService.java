@@ -10,11 +10,13 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import ro.scribemed.backend.audio.application.AudioStorageService;
 import ro.scribemed.backend.audio.application.StoredAudio;
 
 @Service
+@ConditionalOnProperty(prefix = "scribemed.audio.storage", name = "backend", havingValue = "local", matchIfMissing = true)
 public class LocalAudioStorageService implements AudioStorageService {
 
     private final Path storageRoot;
