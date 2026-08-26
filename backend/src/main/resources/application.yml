@@ -59,8 +59,15 @@ scribemed:
       doctor-display-name: ${SCRIBEMED_DEV_DOCTOR_DISPLAY_NAME:Dr. Demo}
 
   audio:
+    storage:
+      backend: ${SCRIBEMED_AUDIO_STORAGE_BACKEND:local}
     local-storage-dir: ${SCRIBEMED_AUDIO_LOCAL_STORAGE_DIR:./var/audio}
     max-size-bytes: ${SCRIBEMED_AUDIO_MAX_SIZE_BYTES:26214400}
+    s3:
+      bucket: ${SCRIBEMED_AUDIO_S3_BUCKET:}
+      region: ${AWS_REGION:${AWS_DEFAULT_REGION:}}
+      endpoint-override: ${SCRIBEMED_AUDIO_S3_ENDPOINT_OVERRIDE:}
+      path-style-access-enabled: ${SCRIBEMED_AUDIO_S3_PATH_STYLE_ACCESS_ENABLED:false}
 
   processing:
     worker:
@@ -82,5 +89,4 @@ scribemed:
     huggingface:
       api-key: ${HF_TOKEN:}
       base-url: ${HUGGINGFACE_BASE_URL:https://router.huggingface.co/v1}
-
 
