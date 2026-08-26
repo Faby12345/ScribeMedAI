@@ -1,4 +1,51 @@
 services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: scribemed-backend:local
+    container_name: scribemed-backend
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      DATABASE_USERNAME: ${POSTGRES_USER}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+
+      SCRIBEMED_AUDIO_LOCAL_STORAGE_DIR: /app/var/audio
+
+      SCRIBEMED_SESSION_COOKIE_SECURE: ${SCRIBEMED_SESSION_COOKIE_SECURE:-false}
+      SCRIBEMED_SESSION_COOKIE_SAME_SITE: ${SCRIBEMED_SESSION_COOKIE_SAME_SITE:-Lax}
+
+      SCRIBEMED_DEV_SEED_ENABLED: ${SCRIBEMED_DEV_SEED_ENABLED:-false}
+      SCRIBEMED_DEV_TENANT_NAME: ${SCRIBEMED_DEV_TENANT_NAME:-Demo Clinic}
+      SCRIBEMED_DEV_DOCTOR_EMAIL: ${SCRIBEMED_DEV_DOCTOR_EMAIL:-}
+      SCRIBEMED_DEV_DOCTOR_PASSWORD: ${SCRIBEMED_DEV_DOCTOR_PASSWORD:-}
+      SCRIBEMED_DEV_DOCTOR_DISPLAY_NAME: ${SCRIBEMED_DEV_DOCTOR_DISPLAY_NAME:-Dr. Demo}
+
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:-}
+      HF_TOKEN: ${HF_TOKEN:-}
+
+    ports:
+      - "8080:8080"
+
+    volumes:
+      - scribemed-backend-audio:/app/var/audio
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8080/actuator/health/readiness >/dev/null || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
   postgres:
     image: postgres:18-alpine
     container_name: scribemed-postgres
@@ -25,4 +72,5 @@ services:
       retries: 10
 
 volumes:
+  scribemed-backend-audio:
   scribemed-postgres-data:
