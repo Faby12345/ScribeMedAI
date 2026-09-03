@@ -1,4 +1,4 @@
-package ro.scribemed.backend.consultation.application;
+package ro.scribemed.backend.consultation.application.exception;
 
 public class ClinicalNoteGenerationProviderException extends RuntimeException {
 

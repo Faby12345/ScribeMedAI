@@ -13,7 +13,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import ro.scribemed.backend.consultation.application.ClinicalNoteGenerationProvider;
-import ro.scribemed.backend.consultation.application.ClinicalNoteGenerationProviderException;
+import ro.scribemed.backend.consultation.application.exception.ClinicalNoteGenerationProviderException;
 import ro.scribemed.backend.consultation.application.ClinicalNoteGenerationResult;
 import ro.scribemed.backend.consultation.infrastructure.dto.HuggingFaceChatRequest;
 import ro.scribemed.backend.consultation.infrastructure.dto.HuggingFaceChatResponse;
