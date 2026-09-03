@@ -41,8 +41,16 @@ public class SecurityConfig {
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .formLogin(formLogin -> formLogin.disable())
                 .logout(logout -> logout.disable())
-                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(sessionAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
+                .addFilterBefore(
+                        sessionAuthenticationFilter,
+                        UsernamePasswordAuthenticationFilter.class
+                )
+
+                .addFilterAfter(
+                        rateLimitFilter,
+                        SessionAuthenticationFilter.class
+                );
 
         return http.build();
     }
