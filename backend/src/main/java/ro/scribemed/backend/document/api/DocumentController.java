@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.UUID;
 
 import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -37,52 +38,56 @@ public class DocumentController {
     }
 
     @GetMapping("/consultations/{consultationId}/document")
-    DocumentReviewResponse getConsultationDocument(
+    ResponseEntity<DocumentReviewResponse> getConsultationDocument(
             @AuthenticationPrincipal CurrentUser currentUser,
             @PathVariable UUID consultationId
     ) {
-        return documentReviewService.getConsultationReviewDocument(
+        DocumentReviewResponse response = documentReviewService.getConsultationReviewDocument(
                 consultationId,
                 currentUser.tenantId()
         );
+        return ResponseEntity.ok(response);
     }
 
     @PatchMapping("/documents/{documentId}/draft")
-    DocumentReviewResponse saveDraft(
+    ResponseEntity<DocumentReviewResponse> saveDraft(
             @AuthenticationPrincipal CurrentUser currentUser,
             @PathVariable UUID documentId,
             @Valid @RequestBody SaveDocumentDraftRequest request
     ) {
-        return documentReviewService.saveDraft(
+        DocumentReviewResponse response = documentReviewService.saveDraft(
                 documentId,
                 currentUser.tenantId(),
                 currentUser.userId(),
                 request
         );
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/documents/{documentId}/approval")
-    DocumentApprovalResponse approveDocument(
+    ResponseEntity<DocumentApprovalResponse> approveDocument(
             @AuthenticationPrincipal CurrentUser currentUser,
             @PathVariable UUID documentId,
             @Valid @RequestBody ApproveDocumentRequest request
     ) {
-        return documentReviewService.approveDocument(
+        DocumentApprovalResponse response = documentReviewService.approveDocument(
                 documentId,
                 currentUser.tenantId(),
                 currentUser.userId(),
                 request
         );
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/patients/{patientId}/documents")
-    List<PatientDocumentSummaryResponse> getPatientDocuments(
+    ResponseEntity<List<PatientDocumentSummaryResponse>> getPatientDocuments(
             @AuthenticationPrincipal CurrentUser currentUser,
             @PathVariable UUID patientId
     ) {
-        return documentHistoryService.getPatientDocuments(
+        List<PatientDocumentSummaryResponse> response = documentHistoryService.getPatientDocuments(
                 patientId,
                 currentUser.tenantId()
         );
+        return ResponseEntity.ok(response);
     }
 }
