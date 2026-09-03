@@ -48,29 +48,43 @@ public class ConsultationController {
     }
 
     @PostMapping("/{consultationId}/patient-informed")
-    ConsultationResponse confirmPatientInformed(
+    ResponseEntity<ConsultationResponse>  confirmPatientInformed(
             @AuthenticationPrincipal CurrentUser currentUser,
             @PathVariable UUID consultationId
     ) {
-        return consultationService.confirmPatientInformed(
+
+        ConsultationResponse response = consultationService.confirmPatientInformed(
                 consultationId,
                 currentUser.tenantId(),
                 currentUser.userId()
         );
+        return ResponseEntity
+                .ok()
+                .body(response);
     }
 
     @PostMapping("/{consultationId}/audio")
-    AudioUploadResponse uploadAudio(
+    ResponseEntity<AudioUploadResponse> uploadAudio(
             @AuthenticationPrincipal CurrentUser currentUser,
             @PathVariable UUID consultationId,
             @RequestParam("file") MultipartFile file
     ) {
-        return consultationService.uploadAudio(
+
+        AudioUploadResponse response = consultationService.uploadAudio(
                 consultationId,
                 currentUser.tenantId(),
                 currentUser.userId(),
-                file
+                file);
+
+        URI jobLocation = URI.create(
+                "/api/v1/processing-jobs/" + response.jobId()
         );
+
+        return ResponseEntity
+                .accepted()
+                .location(jobLocation)
+                .body(response);
+
     }
 
     @GetMapping
@@ -82,19 +96,26 @@ public class ConsultationController {
     }
 
     @GetMapping("/{consultationId}")
-    ConsultationResponse getConsultation(
+    ResponseEntity<ConsultationResponse> getConsultation(
             @AuthenticationPrincipal CurrentUser currentUser,
             @PathVariable UUID consultationId
     ) {
-        return consultationService.getConsultation(consultationId, currentUser.tenantId());
+        ConsultationResponse response = consultationService.getConsultation(consultationId, currentUser.tenantId());
+        return ResponseEntity
+                .ok()
+                .body(response);
     }
 
     @GetMapping("/{consultationId}/transcript")
-    TranscriptResponse getTranscript(
+    ResponseEntity<TranscriptResponse>  getTranscript(
             @AuthenticationPrincipal CurrentUser currentUser,
             @PathVariable UUID consultationId
     ) {
-        return consultationService.getTranscript(consultationId, currentUser.tenantId());
+
+        TranscriptResponse response = consultationService.getTranscript(consultationId, currentUser.tenantId());
+        return ResponseEntity
+                .ok()
+                .body(response);
     }
 
     @PostMapping("/{consultationId}/notes")
