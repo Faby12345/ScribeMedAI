@@ -12,6 +12,10 @@ public class RateLimitWindow {
 
     protected RateLimitWindow() {}
 
+    public Instant getWindowStartedAt() {
+        return windowStartedAt;
+    }
+
     public RateLimitWindow(RateLimitScope scope, String identifier, Instant updatedAt) {
         if(scope == null){
             throw new RuntimeException("scope cannot be null");
@@ -20,8 +24,12 @@ public class RateLimitWindow {
         this.scope = scope;
         this.identifier = identifier;
         this.windowStartedAt = updatedAt;
-        this.requestCount = 1;
+        this.requestCount = 0;
         this.updatedAt = updatedAt;
+    }
+
+    public int getRequestCount() {
+        return requestCount;
     }
 
     @Id
@@ -62,7 +70,7 @@ public class RateLimitWindow {
     }
 
     public void reset(Instant now){
-        this.requestCount = 1;
+        this.requestCount = 0;
         this.updatedAt = now;
         this.windowStartedAt = now;
     }

@@ -13,6 +13,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import ro.scribemed.backend.identity.security.SessionAuthenticationFilter;
+import ro.scribemed.backend.shared.rateLimit.infrastructure.http.RateLimitFilter;
 
 @Configuration
 public class SecurityConfig {
@@ -20,7 +21,8 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
-            SessionAuthenticationFilter sessionAuthenticationFilter
+            SessionAuthenticationFilter sessionAuthenticationFilter,
+            RateLimitFilter rateLimitFilter
     ) throws Exception {
         http
                 .csrf(csrf -> csrf
@@ -39,6 +41,7 @@ public class SecurityConfig {
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .formLogin(formLogin -> formLogin.disable())
                 .logout(logout -> logout.disable())
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(sessionAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
