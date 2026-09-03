@@ -1,7 +1,5 @@
 package ro.scribemed.backend.shared.rateLimit.application;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ro.scribemed.backend.shared.rateLimit.domain.*;
@@ -17,8 +15,6 @@ public class FixedWindowRateLimiter implements RateLimiter {
 
 
     private final RateLimitWindowRepository rateLimitWindowRepository;
-    private final Logger log = LoggerFactory.getLogger(FixedWindowRateLimiter.class);
-
     public FixedWindowRateLimiter(RateLimitWindowRepository rateLimitWindowRepository) {
         this.rateLimitWindowRepository = rateLimitWindowRepository;
     }
@@ -38,12 +34,6 @@ public class FixedWindowRateLimiter implements RateLimiter {
         boolean expired = Duration
                 .between(currentWindow.getWindowStartedAt(), now)
                 .compareTo(policy.window()) >= 0;
-
-        log.info(
-                "SCOPE: {}, IDENTIFIER: {}",
-                key.scope(),
-                key.identifier()
-        );
 
         if (expired) {
             currentWindow.reset(now);     // count = 0
