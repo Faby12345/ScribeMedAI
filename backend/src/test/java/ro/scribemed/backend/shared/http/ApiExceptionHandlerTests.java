@@ -57,4 +57,15 @@ class ApiExceptionHandlerTests {
                 "Fișierul audio nu a putut fi stocat. Încercați din nou."
         ));
     }
+
+    @Test
+    void mapsFailedAuthenticationToSafeUnauthorizedResponse() {
+        ResponseEntity<ApiErrorResponse> response = exceptionHandler.handleAuthenticationException();
+
+        assertThat(response.getStatusCode().value()).isEqualTo(401);
+        assertThat(response.getBody()).isEqualTo(new ApiErrorResponse(
+                "AUTHENTICATION_FAILED",
+                "Emailul sau parola sunt incorecte."
+        ));
+    }
 }
