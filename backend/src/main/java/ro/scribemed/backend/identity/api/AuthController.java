@@ -22,6 +22,7 @@ import ro.scribemed.backend.identity.application.LoginResult;
 import ro.scribemed.backend.identity.config.SessionCookieProperties;
 import ro.scribemed.backend.identity.security.CurrentUser;
 import ro.scribemed.backend.identity.security.SessionAuthenticationFilter;
+import ro.scribemed.backend.shared.http.ApiErrorResponse;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -55,20 +56,18 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    AuthenticatedUserResponse me(@AuthenticationPrincipal CurrentUser currentUser) {
-        return new AuthenticatedUserResponse(
+    ResponseEntity<AuthenticatedUserResponse> me(@AuthenticationPrincipal CurrentUser currentUser) {
+        AuthenticatedUserResponse response = new AuthenticatedUserResponse(
                 currentUser.userId(),
                 currentUser.tenantId(),
                 currentUser.email(),
                 currentUser.displayName(),
                 currentUser.role()
         );
+        return ResponseEntity.ok(response);
     }
 
-    @ExceptionHandler(AuthenticationException.class)
-    ResponseEntity<Void> handleAuthenticationException() {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-    }
+
 
     private ResponseCookie createSessionCookie(LoginResult result) {
         long maxAgeSeconds = Math.max(0, Duration.between(java.time.Instant.now(), result.expiresAt()).toSeconds());

@@ -1,6 +1,7 @@
 package ro.scribemed.backend.shared.http;
 
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -15,6 +16,7 @@ import ro.scribemed.backend.consultation.application.exception.TenantNotFoundExc
 import ro.scribemed.backend.consultation.application.exception.TranscriptNotAvailableException;
 import ro.scribemed.backend.consultation.application.exception.UnsupportedAudioTypeException;
 import ro.scribemed.backend.document.application.DocumentStateException;
+import ro.scribemed.backend.identity.application.AuthenticationException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -90,6 +92,15 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(503)
                 .body(new ApiErrorResponse("AUDIO_STORAGE_UNAVAILABLE", "Fișierul audio nu a putut fi stocat. Încercați din nou."));
     }
+    @ExceptionHandler(AuthenticationException.class)
+    ResponseEntity<ApiErrorResponse> handleAuthenticationException() {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ApiErrorResponse(
+                        "AUTHENTICATION_FAILED",
+                        "Emailul sau parola sunt incorecte."
+                ));
+    }
+
 
     private ResponseEntity<ApiErrorResponse> badRequest(String code, String message) {
         return ResponseEntity.badRequest().body(new ApiErrorResponse(code, message));
