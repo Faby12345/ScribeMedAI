@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import ro.scribemed.backend.consultation.application.ClinicalNoteGenerationProvider;
-import ro.scribemed.backend.consultation.application.ClinicalNoteGenerationProviderException;
+import ro.scribemed.backend.consultation.application.exception.ClinicalNoteGenerationProviderException;
 import ro.scribemed.backend.consultation.application.ClinicalNoteGenerationResult;
 import ro.scribemed.backend.consultation.dto.NotesRequest;
 import ro.scribemed.backend.consultation.domain.Consultation;

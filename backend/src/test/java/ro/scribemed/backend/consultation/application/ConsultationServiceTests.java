@@ -17,7 +17,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.data.domain.Page;
@@ -31,6 +30,11 @@ import ro.scribemed.backend.audio.infrastructure.ConsultationAudioRepository;
 import ro.scribemed.backend.audit.application.AuditService;
 import ro.scribemed.backend.consultation.domain.Consultation;
 import ro.scribemed.backend.consultation.domain.ConsultationStatus;
+import ro.scribemed.backend.consultation.application.exception.AudioFileTooLargeException;
+import ro.scribemed.backend.consultation.application.exception.ConsultationNotFoundException;
+import ro.scribemed.backend.consultation.application.exception.ConsultationStateException;
+import ro.scribemed.backend.consultation.application.exception.PatientNotFoundException;
+import ro.scribemed.backend.consultation.application.exception.UnsupportedAudioTypeException;
 import ro.scribemed.backend.consultation.dto.AudioUploadResponse;
 import ro.scribemed.backend.consultation.dto.ConsultationResponse;
 import ro.scribemed.backend.consultation.dto.CreateConsultationRequest;
@@ -135,7 +139,7 @@ class ConsultationServiceTests {
                 tenantId,
                 UUID.randomUUID(),
                 patientId
-        ))).isInstanceOf(EntityNotFoundException.class);
+        ))).isInstanceOf(PatientNotFoundException.class);
     }
 
     @Test
@@ -219,8 +223,7 @@ class ConsultationServiceTests {
                 tenantId,
                 actorUserId,
                 file
-        )).isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Patient informed confirmation is required");
+        )).isInstanceOf(ConsultationStateException.class);
 
         verify(audioStorageService, never()).store(any(), any(), anyLong());
         verify(audioRepository, never()).save(any());
@@ -246,7 +249,7 @@ class ConsultationServiceTests {
                 tenantId,
                 actorUserId,
                 file
-        )).isInstanceOf(EntityNotFoundException.class);
+        )).isInstanceOf(ConsultationNotFoundException.class);
 
         verify(audioStorageService, never()).store(any(), any(), anyLong());
         verify(audioRepository, never()).save(any());
@@ -285,8 +288,7 @@ class ConsultationServiceTests {
                 tenantId,
                 actorUserId,
                 file
-        )).isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Audio file type is not supported");
+        )).isInstanceOf(UnsupportedAudioTypeException.class);
 
         verify(audioStorageService, never()).store(any(), any(), anyLong());
         verify(audioRepository, never()).save(any());
@@ -338,8 +340,7 @@ class ConsultationServiceTests {
                 tenantId,
                 actorUserId,
                 file
-        )).isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Audio file is too large");
+        )).isInstanceOf(AudioFileTooLargeException.class);
 
         verify(audioStorageService, never()).store(any(), any(), anyLong());
         verify(audioRepository, never()).save(any());

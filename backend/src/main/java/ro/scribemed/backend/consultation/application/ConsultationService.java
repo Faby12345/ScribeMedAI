@@ -6,7 +6,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,6 +22,15 @@ import ro.scribemed.backend.audio.infrastructure.ConsultationAudioRepository;
 import ro.scribemed.backend.audit.application.AuditService;
 import ro.scribemed.backend.consultation.domain.Consultation;
 import ro.scribemed.backend.consultation.domain.ConsultationNotes;
+import ro.scribemed.backend.consultation.application.exception.AudioFileRequiredException;
+import ro.scribemed.backend.consultation.application.exception.AudioFileTooLargeException;
+import ro.scribemed.backend.consultation.application.exception.AudioStorageUnavailableException;
+import ro.scribemed.backend.consultation.application.exception.ConsultationNotFoundException;
+import ro.scribemed.backend.consultation.application.exception.ConsultationStateException;
+import ro.scribemed.backend.consultation.application.exception.PatientNotFoundException;
+import ro.scribemed.backend.consultation.application.exception.TenantNotFoundException;
+import ro.scribemed.backend.consultation.application.exception.TranscriptNotAvailableException;
+import ro.scribemed.backend.consultation.application.exception.UnsupportedAudioTypeException;
 import ro.scribemed.backend.consultation.dto.AudioUploadResponse;
 import ro.scribemed.backend.consultation.dto.ConsultationResponse;
 import ro.scribemed.backend.consultation.dto.CreateConsultationRequest;
@@ -31,7 +39,6 @@ import ro.scribemed.backend.consultation.dto.NotesResponse;
 import ro.scribemed.backend.consultation.dto.TranscriptResponse;
 import ro.scribemed.backend.consultation.infrastructure.ConsultationNotesRepository;
 import ro.scribemed.backend.consultation.infrastructure.ConsultationRepository;
-import ro.scribemed.backend.identity.application.AuthService;
 import ro.scribemed.backend.identity.domain.AppUser;
 import ro.scribemed.backend.identity.infrastructure.AppUserRepository;
 import ro.scribemed.backend.patient.domain.Patient;
@@ -47,7 +54,7 @@ import ro.scribemed.backend.transcription.infrastructure.ConsultationTranscriptR
 @Service
 public class ConsultationService {
 
-    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+    private static final Logger log = LoggerFactory.getLogger(ConsultationService.class);
 
     private static final Set<String> ALLOWED_AUDIO_TYPES = Set.of(
             "audio/webm",
@@ -102,9 +109,9 @@ public class ConsultationService {
     @Transactional
     public ConsultationResponse createConsultation(CreateConsultationRequest request) {
         Tenant tenant = tenantRepository.findById(request.tenantId())
-                .orElseThrow(() -> new EntityNotFoundException("Tenant not found"));
+                .orElseThrow(TenantNotFoundException::new);
         Patient patient = patientRepository.findByIdAndTenant_Id(request.patientId(), request.tenantId())
-                .orElseThrow(() -> new EntityNotFoundException("Patient not found"));
+                .orElseThrow(PatientNotFoundException::new);
         AppUser actorUser = appUserRepository.findByIdAndTenant_Id(request.actorUserId(), request.tenantId())
                 .orElseThrow(() -> new AccessDeniedException("Actor user is not part of the tenant"));
 
@@ -153,7 +160,7 @@ public class ConsultationService {
                 .orElseThrow(() -> new AccessDeniedException("Actor user is not part of the tenant"));
 
         if (consultation.getPatientInformedAt() == null) {
-            throw new IllegalArgumentException("Patient informed confirmation is required before audio upload");
+            throw new ConsultationStateException();
         }
 
         validateAudio(file);
@@ -163,7 +170,8 @@ public class ConsultationService {
         try {
             storedAudio = audioStorageService.store(objectKey, file.getInputStream(), file.getSize());
         } catch (IOException error) {
-            throw new IllegalStateException("Audio file could not be stored", error);
+            log.warn("Audio storage failed tenantId={} consultationId={}", tenantId, consultationId);
+            throw new AudioStorageUnavailableException(error);
         }
 
         ConsultationAudio audio = audioRepository.save(new ConsultationAudio(
@@ -214,23 +222,23 @@ public class ConsultationService {
         getTenantConsultation(consultationId, tenantId);
         return transcriptRepository.findByConsultation_IdAndTenant_Id(consultationId, tenantId)
                 .map(TranscriptResponse::from)
-                .orElseThrow(() -> new EntityNotFoundException("Transcript not found"));
+                .orElseThrow(TranscriptNotAvailableException::new);
     }
 
     private Consultation getTenantConsultation(UUID consultationId, UUID tenantId) {
         return consultationRepository.findByIdAndTenant_Id(consultationId, tenantId)
-                .orElseThrow(() -> new EntityNotFoundException("Consultation not found"));
+                .orElseThrow(ConsultationNotFoundException::new);
     }
 
     private void validateAudio(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("Audio file is required");
+            throw new AudioFileRequiredException();
         }
         if (file.getSize() > maxAudioSizeBytes) {
-            throw new IllegalArgumentException("Audio file is too large");
+            throw new AudioFileTooLargeException();
         }
         if (file.getContentType() == null || !ALLOWED_AUDIO_TYPES.contains(file.getContentType())) {
-            throw new IllegalArgumentException("Audio file type is not supported");
+            throw new UnsupportedAudioTypeException();
         }
     }
 
@@ -238,6 +246,7 @@ public class ConsultationService {
         return "tenant/%s/consultation/%s/%s%s".formatted(
                 tenantId,
                 consultationId,
+
                 UUID.randomUUID(),
                 extensionFrom(originalFilename)
         );
@@ -260,13 +269,12 @@ public class ConsultationService {
     public NotesResponse processNotes(NotesRequest request, UUID tenantId, UUID appUserId, UUID consultationId){
 
         Tenant tenant = tenantRepository.findById(tenantId)
-                .orElseThrow(() -> new EntityNotFoundException("Tenant not found!"));
+                .orElseThrow(TenantNotFoundException::new);
 
         AppUser appUser = appUserRepository.findByIdAndTenant_Id(appUserId, tenantId)
-                .orElseThrow(() -> new EntityNotFoundException("App user not found!"));
+                .orElseThrow(() -> new AccessDeniedException("Actor user is not part of the tenant"));
 
-        Consultation consultation = consultationRepository.findByIdAndTenant_Id(consultationId, tenantId)
-                .orElseThrow(() -> new EntityNotFoundException("Consultation not found!"));
+        Consultation consultation = getTenantConsultation(consultationId, tenantId);
 
         // add clinical note to db
         ConsultationNotes notes = ConsultationNotes.create(

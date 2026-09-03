@@ -40,7 +40,8 @@ public class AuthController {
         LoginResult result = authService.login(request.email(), request.password());
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, createSessionCookie(result).toString())
+                .header(HttpHeaders.SET_COOKIE,
+                        createSessionCookie(result).toString())
                 .body(new LoginResponse(result.user()));
     }
 
