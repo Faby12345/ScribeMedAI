@@ -19,7 +19,6 @@ import ro.scribemed.backend.identity.domain.UserRole;
 import ro.scribemed.backend.identity.dto.AuthenticatedUserResponse;
 import ro.scribemed.backend.identity.security.CurrentUser;
 import ro.scribemed.backend.identity.security.SessionAuthenticationFilter;
-import ro.scribemed.backend.shared.http.ApiErrorResponse;
 
 class AuthControllerTests {
 
@@ -70,17 +69,6 @@ class AuthControllerTests {
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         assertThat(response.getBody().id()).isEqualTo(currentUser.userId());
         assertThat(response.getBody().tenantId()).isEqualTo(currentUser.tenantId());
-    }
-
-    @Test
-    void returnsSafeUnauthorizedResponseForFailedAuthentication() {
-        ResponseEntity<ApiErrorResponse> response = controller.handleAuthenticationException();
-
-        assertThat(response.getStatusCode().value()).isEqualTo(401);
-        assertThat(response.getBody()).isEqualTo(new ApiErrorResponse(
-                "AUTHENTICATION_FAILED",
-                "Emailul sau parola sunt incorecte."
-        ));
     }
 
     private CurrentUser currentUser() {

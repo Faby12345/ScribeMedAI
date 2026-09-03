@@ -5,11 +5,9 @@ import java.time.Duration;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -17,12 +15,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import ro.scribemed.backend.identity.application.AuthService;
 import ro.scribemed.backend.identity.dto.AuthenticatedUserResponse;
-import ro.scribemed.backend.identity.application.AuthenticationException;
 import ro.scribemed.backend.identity.application.LoginResult;
 import ro.scribemed.backend.identity.config.SessionCookieProperties;
 import ro.scribemed.backend.identity.security.CurrentUser;
 import ro.scribemed.backend.identity.security.SessionAuthenticationFilter;
-import ro.scribemed.backend.shared.http.ApiErrorResponse;
 
 @RestController
 @RequestMapping("/api/v1/auth")
