@@ -45,6 +45,11 @@ logging:
     org.hibernate.orm.jdbc.bind: WARN
 
 scribemed:
+  medications:
+    import:
+      enabled: ${SCRIBEMED_MEDICATION_IMPORT_ENABLED:false}
+      source: ${SCRIBEMED_MEDICATION_IMPORT_SOURCE:excel}
+      file-path: ${SCRIBEMED_MEDICATION_IMPORT_FILE_PATH:/Users/turlefabian/Downloads/nomenclator.xlsx}
   session:
     cookie:
       secure: ${SCRIBEMED_SESSION_COOKIE_SECURE:true}
