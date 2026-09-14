@@ -17,6 +17,7 @@ const navigationItems = [
   { label: "Panou", href: "/dashboard", matcher: "/dashboard" },
   { label: "Pacienți", href: "/patients", matcher: "/patients" },
   { label: "Consultații", href: "/consultations", matcher: "/consultations" },
+  { label: "Medicamente", href: "/medications", matcher: "/medications" },
 ];
 
 export function AppShell({ children }: AppShellProps) {
