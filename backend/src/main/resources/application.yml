@@ -45,6 +45,9 @@ logging:
     org.hibernate.orm.jdbc.bind: WARN
 
 scribemed:
+  embedding:
+    base-url: ${EMBEDDING_SERVICE_URL:http://localhost:8000}
+    expected-dimensions: 384
   medications:
     import:
       enabled: ${SCRIBEMED_MEDICATION_IMPORT_ENABLED:false}
