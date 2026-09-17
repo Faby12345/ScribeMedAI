@@ -1,0 +1,35 @@
+package ro.scribemed.backend.knowledge.infrastructure;
+
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import ro.scribemed.backend.knowledge.domain.KnowledgeChunk;
+import ro.scribemed.backend.knowledge.domain.KnowledgeDocumentStatus;
+
+import java.util.List;
+import java.util.UUID;
+
+public interface KnowledgeChunkRepository
+        extends JpaRepository<KnowledgeChunk, UUID> {
+
+    List<KnowledgeChunk> findAllByDocument_IdOrderByChunkIndex(UUID documentId);
+
+    @Modifying(flushAutomatically = true)
+    @Query("delete from KnowledgeChunk chunk where chunk.document.id = :documentId")
+    int deleteAllByDocumentId(@Param("documentId") UUID documentId);
+
+    @Query("""
+            select chunk
+            from KnowledgeChunk chunk
+            join fetch chunk.document document
+            where document.status = :status
+            order by cosine_distance(chunk.embedding, :embedding)
+            """)
+    List<KnowledgeChunk> findNearestByCosineDistance(
+            @Param("embedding") float[] embedding,
+            @Param("status") KnowledgeDocumentStatus status,
+            Pageable pageable
+    );
+}

@@ -4,13 +4,19 @@ import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.stereotype.Service;
+import ro.scribemed.backend.identity.domain.AppUser;
+import ro.scribemed.backend.knowledge.dto.ExtractedPage;
+import ro.scribemed.backend.knowledge.dto.StoredPdf;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Service
-public class PdfExtractorService {
+public abstract class PdfService {
+
     public static List<ExtractedPage> extract(byte[] pdfBytes) throws IOException {
         try (PDDocument document = Loader.loadPDF(pdfBytes)) {
             List<ExtractedPage> pages = new ArrayList<>();
@@ -29,4 +35,18 @@ public class PdfExtractorService {
             return pages;
         }
     }
+    public String buildObjectKey(UUID tenantId) {
+        UUID storageId = UUID.randomUUID();
+
+        return "tenant/%s/knowledge/%s.pdf".formatted(
+                tenantId,
+                storageId
+        );
+    }
+
+
+    public abstract StoredPdf store(UUID tenantId, InputStream inputStream, long sizeBytes) throws IOException;
+
+
+    public abstract byte[] read(String objectKey) throws IOException;
 }

@@ -1,4 +1,4 @@
-package ro.scribemed.backend.knowledge.application;
+package ro.scribemed.backend.knowledge.dto;
 
 public record ExtractedPage(int page, String content) {
 }

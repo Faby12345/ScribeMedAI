@@ -1,6 +1,7 @@
 package ro.scribemed.backend.processing.domain;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -16,6 +17,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import ro.scribemed.backend.consultation.domain.Consultation;
 import ro.scribemed.backend.consultation.domain.ConsultationNotes;
+import ro.scribemed.backend.knowledge.domain.KnowledgeDocument;
 import ro.scribemed.backend.tenancy.domain.Tenant;
 
 /*
@@ -40,9 +42,13 @@ public class ProcessingJob {
     @JoinColumn(name = "tenant_id", nullable = false)
     private Tenant tenant;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "consultation_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "consultation_id")
     private Consultation consultation;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "knowledge_document_id")
+    private KnowledgeDocument knowledgeDocument;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "source_notes_id")
@@ -51,6 +57,10 @@ public class ProcessingJob {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
     private ProcessingJobType jobType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "target_type", nullable = false, length = 40)
+    private ProcessingJobTargetType targetType;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40)
@@ -90,12 +100,23 @@ public class ProcessingJob {
     }
 
     public ProcessingJob(Tenant tenant, Consultation consultation, ProcessingJobType jobType) {
-        this.tenant = tenant;
-        this.consultation = consultation;
-        this.jobType = jobType;
-        this.status = ProcessingJobStatus.PENDING;
-        this.maxAttempts = 3;
-        this.nextAttemptAt = Instant.now();
+        initialize(tenant, jobType, ProcessingJobTargetType.CONSULTATION);
+        this.consultation = Objects.requireNonNull(
+                consultation,
+                "consultation must not be null"
+        );
+    }
+
+    public ProcessingJob(
+            Tenant tenant,
+            KnowledgeDocument knowledgeDocument,
+            ProcessingJobType jobType
+    ) {
+        initialize(tenant, jobType, ProcessingJobTargetType.KNOWLEDGE_DOCUMENT);
+        this.knowledgeDocument = Objects.requireNonNull(
+                knowledgeDocument,
+                "knowledgeDocument must not be null"
+        );
     }
 
     public ProcessingJob(
@@ -105,7 +126,30 @@ public class ProcessingJob {
             ProcessingJobType jobType
     ) {
         this(tenant, consultation, jobType);
-        this.sourceNotes = sourceNotes;
+        this.sourceNotes = Objects.requireNonNull(
+                sourceNotes,
+                "sourceNotes must not be null"
+        );
+    }
+
+    private void initialize(
+            Tenant tenant,
+            ProcessingJobType jobType,
+            ProcessingJobTargetType expectedTargetType
+    ) {
+        this.tenant = Objects.requireNonNull(tenant, "tenant must not be null");
+        this.jobType = Objects.requireNonNull(jobType, "jobType must not be null");
+        if (jobType.targetType() != expectedTargetType) {
+            throw new IllegalArgumentException(
+                    "Job type %s requires target type %s"
+                            .formatted(jobType, jobType.targetType())
+            );
+        }
+
+        this.targetType = expectedTargetType;
+        this.status = ProcessingJobStatus.PENDING;
+        this.maxAttempts = 3;
+        this.nextAttemptAt = Instant.now();
     }
 
     @PrePersist
@@ -164,12 +208,20 @@ public class ProcessingJob {
         return consultation;
     }
 
+    public KnowledgeDocument getKnowledgeDocument() {
+        return knowledgeDocument;
+    }
+
     public ConsultationNotes getSourceNotes() {
         return sourceNotes;
     }
 
     public ProcessingJobType getJobType() {
         return jobType;
+    }
+
+    public ProcessingJobTargetType getTargetType() {
+        return targetType;
     }
 
     public ProcessingJobStatus getStatus() {
