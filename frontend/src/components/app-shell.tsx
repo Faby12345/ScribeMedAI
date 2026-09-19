@@ -18,6 +18,7 @@ const navigationItems = [
   { label: "Pacienți", href: "/patients", matcher: "/patients" },
   { label: "Consultații", href: "/consultations", matcher: "/consultations" },
   { label: "Medicamente", href: "/medications", matcher: "/medications" },
+  { label: "Cunoștințe", href: "/knowledge", matcher: "/knowledge" },
 ];
 
 export function AppShell({ children }: AppShellProps) {

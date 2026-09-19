@@ -5,7 +5,13 @@ import { cn } from "@/lib/class-names";
 
 type PatientAreaShellProps = {
   user: AuthenticatedUser;
-  activeItem: "overview" | "patients" | "consultations" | "medications" | "settings";
+  activeItem:
+    | "overview"
+    | "patients"
+    | "consultations"
+    | "medications"
+    | "knowledge"
+    | "settings";
   children: ReactNode;
   width?: "standard" | "wide";
 };
