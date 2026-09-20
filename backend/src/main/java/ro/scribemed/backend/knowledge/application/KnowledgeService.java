@@ -64,7 +64,8 @@ public class KnowledgeService {
                         "originalFilename",
                         500
                 ),
-                checksum
+                checksum,
+                normalizeRequired(command.objectKey(), "objectKey", 1000)
         );
 
         return documentRepository.save(document);

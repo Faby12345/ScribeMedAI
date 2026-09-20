@@ -54,13 +54,15 @@ class KnowledgeServiceTest {
                         LocalDate.of(2026, 1, 10),
                         "  2.0  ",
                         "  ghid.pdf  ",
-                        "A".repeat(64)
+                        "A".repeat(64),
+                        "  tenant/test/knowledge/ghid.pdf  "
                 )
         );
 
         assertEquals("Ghid clinic", document.getTitle());
         assertEquals("Ministerul Sănătății", document.getSourceInstitution());
         assertEquals("a".repeat(64), document.getChecksum());
+        assertEquals("tenant/test/knowledge/ghid.pdf", document.getObjectKey());
         assertEquals(KnowledgeDocumentStatus.PROCESSING, document.getStatus());
     }
 
@@ -154,7 +156,8 @@ class KnowledgeServiceTest {
                 null,
                 null,
                 "ghid.pdf",
-                checksum
+                checksum,
+                "tenant/test/knowledge/ghid.pdf"
         );
     }
 
@@ -166,7 +169,8 @@ class KnowledgeServiceTest {
                 null,
                 null,
                 "ghid.pdf",
-                "c".repeat(64)
+                "c".repeat(64),
+                "tenant/test/knowledge/ghid.pdf"
         );
     }
 
