@@ -9,6 +9,7 @@ public record CreateKnowledgeDocumentCommand(
         LocalDate publishedAt,
         String version,
         String originalFilename,
-        String checksum
+        String checksum,
+        String objectKey
 ) {
 }

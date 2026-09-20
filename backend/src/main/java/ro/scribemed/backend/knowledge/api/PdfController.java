@@ -1,5 +1,6 @@
 package ro.scribemed.backend.knowledge.api;
 
+import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -30,9 +31,9 @@ public class PdfController {
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
     public ResponseEntity<Void> upload(
-            @RequestParam("file") MultipartFile file,
-            @AuthenticationPrincipal AppUser currentUser,
-            @RequestBody  KnowledgeDocumentRequest dto
+            @RequestPart("file") MultipartFile file,
+            @RequestPart("request") @Valid KnowledgeDocumentRequest dto,
+            @AuthenticationPrincipal CurrentUser currentUser
             ) throws IOException
     {
         knowledgeDocumentIngestionService.process(

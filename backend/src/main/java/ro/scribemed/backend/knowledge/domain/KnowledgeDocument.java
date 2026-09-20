@@ -46,6 +46,9 @@ public class KnowledgeDocument {
     @Column(nullable = false, unique = true, length = 64)
     private String checksum;
 
+    @Column(name = "object_key", nullable = false, unique = true, length = 1000)
+    private String objectKey;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -60,7 +63,8 @@ public class KnowledgeDocument {
             LocalDate publishedAt,
             String version,
             String originalFilename,
-            String checksum
+            String checksum,
+            String objectKey
     ) {
         this.title = title;
         this.sourceInstitution = sourceInstitution;
@@ -69,6 +73,7 @@ public class KnowledgeDocument {
         this.version = version;
         this.originalFilename = originalFilename;
         this.checksum = checksum;
+        this.objectKey = objectKey;
         this.status = KnowledgeDocumentStatus.PROCESSING;
     }
 
@@ -145,7 +150,12 @@ public class KnowledgeDocument {
         return checksum;
     }
 
+    public String getObjectKey() {
+        return objectKey;
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
+
 }

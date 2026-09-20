@@ -13,6 +13,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
+import {
+  uploadKnowledgeDocument,
+  UploadPdfApiError,
+} from "@/features/knowledge/api/upload-pdf";
 import { cn } from "@/lib/class-names";
 
 const MAX_PDF_SIZE_BYTES = 25 * 1024 * 1024;
@@ -32,9 +36,16 @@ export function KnowledgeDocumentUpload() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [isDragging, setIsDragging] = useState(false);
   const [isPrepared, setIsPrepared] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  function markFormChanged() {
+    setIsPrepared(false);
+    setSubmitError(null);
+  }
 
   function selectFile(nextFile: File | undefined) {
-    setIsPrepared(false);
+    markFormChanged();
 
     if (!nextFile) {
       return;
@@ -70,7 +81,7 @@ export function KnowledgeDocumentUpload() {
 
   function removeFile() {
     setFile(null);
-    setIsPrepared(false);
+    markFormChanged();
     setErrors((current) => ({ ...current, file: undefined }));
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -85,10 +96,15 @@ export function KnowledgeDocumentUpload() {
     setPublishedAt("");
     setVersion("");
     setErrors({});
+    setSubmitError(null);
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (isSubmitting) {
+      return;
+    }
 
     const nextErrors: FormErrors = {};
 
@@ -107,7 +123,36 @@ export function KnowledgeDocumentUpload() {
     }
 
     setErrors(nextErrors);
-    setIsPrepared(Object.keys(nextErrors).length === 0);
+    setIsPrepared(false);
+    setSubmitError(null);
+
+    const hasErrors = Object.keys(nextErrors).length > 0;
+
+    if (hasErrors || !file) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      await uploadKnowledgeDocument(file, {
+        title: title.trim(),
+        sourceInstitution: sourceInstitution.trim(),
+        sourceUrl: sourceUrl.trim() || undefined,
+        publishedAt: publishedAt || undefined,
+        version: version.trim() || undefined,
+      });
+
+      setIsPrepared(true);
+    } catch (error) {
+      setSubmitError(
+        error instanceof UploadPdfApiError
+          ? error.message
+          : "Documentul nu a putut fi încărcat. Încearcă din nou.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -157,6 +202,7 @@ export function KnowledgeDocumentUpload() {
                   type="file"
                   accept="application/pdf,.pdf"
                   className="sr-only"
+                  disabled={isSubmitting}
                   aria-describedby={
                     errors.file
                       ? "knowledge-file-error"
@@ -184,6 +230,7 @@ export function KnowledgeDocumentUpload() {
                         type="button"
                         variant="outline"
                         size="sm"
+                        disabled={isSubmitting}
                         onClick={() => fileInputRef.current?.click()}
                       >
                         Înlocuiește
@@ -192,6 +239,7 @@ export function KnowledgeDocumentUpload() {
                         type="button"
                         variant="ghost"
                         size="sm"
+                        disabled={isSubmitting}
                         onClick={removeFile}
                       >
                         Elimină
@@ -230,7 +278,7 @@ export function KnowledgeDocumentUpload() {
                   aria-describedby={errors.title ? "knowledge-title-error" : undefined}
                   onChange={(event) => {
                     setTitle(event.target.value);
-                    setIsPrepared(false);
+                    markFormChanged();
                   }}
                 />
               </FormField>
@@ -253,7 +301,7 @@ export function KnowledgeDocumentUpload() {
                   }
                   onChange={(event) => {
                     setSourceInstitution(event.target.value);
-                    setIsPrepared(false);
+                    markFormChanged();
                   }}
                 />
               </FormField>
@@ -278,7 +326,7 @@ export function KnowledgeDocumentUpload() {
                   }
                   onChange={(event) => {
                     setSourceUrl(event.target.value);
-                    setIsPrepared(false);
+                    markFormChanged();
                   }}
                 />
               </FormField>
@@ -296,7 +344,7 @@ export function KnowledgeDocumentUpload() {
                   aria-describedby="knowledge-published-at-description"
                   onChange={(event) => {
                     setPublishedAt(event.target.value);
-                    setIsPrepared(false);
+                    markFormChanged();
                   }}
                 />
               </FormField>
@@ -314,25 +362,41 @@ export function KnowledgeDocumentUpload() {
                   aria-describedby="knowledge-version-description"
                   onChange={(event) => {
                     setVersion(event.target.value);
-                    setIsPrepared(false);
+                    markFormChanged();
                   }}
                 />
               </FormField>
             </div>
 
             {isPrepared ? (
-              <Alert variant="success" title="Document pregătit">
-                Datele au trecut validarea locală. Încărcarea către server nu
-                este conectată încă.
+              <Alert variant="success" title="Document trimis">
+                Documentul a fost acceptat și va fi procesat în fundal.
+              </Alert>
+            ) : null}
+
+            {submitError ? (
+              <Alert variant="error" title="Încărcarea a eșuat">
+                {submitError}
               </Alert>
             ) : null}
 
             <div className="flex flex-col-reverse gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-end">
-              <Button type="button" variant="ghost" onClick={resetForm}>
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={isSubmitting}
+                onClick={resetForm}
+              >
                 Resetează
               </Button>
-              <Button type="submit" variant="primary">
-                Verifică documentul
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={isPrepared}
+                isLoading={isSubmitting}
+                loadingText="Se încarcă..."
+              >
+                {isPrepared ? "Document trimis" : "Încarcă documentul"}
               </Button>
             </div>
           </form>
@@ -343,9 +407,9 @@ export function KnowledgeDocumentUpload() {
         className="space-y-6 lg:sticky lg:top-24"
         aria-label="Informații despre documente"
       >
-        <Alert variant="info" title="Despre această etapă">
-          Documentul este verificat numai în browser. Nu este trimis încă
-          spre procesare.
+        <Alert variant="info" title="Procesare asincronă">
+          După încărcare, documentul este procesat în fundal și devine
+          disponibil după finalizarea verificărilor.
         </Alert>
 
         <section

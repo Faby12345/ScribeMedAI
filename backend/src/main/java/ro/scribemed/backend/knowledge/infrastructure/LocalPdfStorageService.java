@@ -1,11 +1,9 @@
 package ro.scribemed.backend.knowledge.infrastructure;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.servlet.ServletRegistration;
-import org.springframework.data.domain.Page;
+
 import org.springframework.stereotype.Service;
 import ro.scribemed.backend.audit.application.AuditService;
-import ro.scribemed.backend.identity.domain.AppUser;
 import ro.scribemed.backend.knowledge.application.PdfService;
 import ro.scribemed.backend.knowledge.dto.StoredPdf;
 

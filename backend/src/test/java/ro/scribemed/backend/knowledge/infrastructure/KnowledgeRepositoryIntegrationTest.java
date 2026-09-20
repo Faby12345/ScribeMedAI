@@ -49,7 +49,8 @@ class KnowledgeRepositoryIntegrationTest {
                         null,
                         null,
                         "ghid.pdf",
-                        "d".repeat(64)
+                        "d".repeat(64),
+                        "tenant/test/knowledge/ghid.pdf"
                 )
         );
 

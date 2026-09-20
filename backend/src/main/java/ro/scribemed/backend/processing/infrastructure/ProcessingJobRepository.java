@@ -49,6 +49,18 @@ public interface ProcessingJobRepository extends JpaRepository<ProcessingJob, UU
             """, nativeQuery = true)
     Optional<ProcessingJob> findNextTranscriptStructureJobForUpdate();
 
+    @Query(value = """
+            SELECT *
+            FROM processing_job
+            WHERE job_type = 'INGEST_DOCUMENT'
+              AND status IN ('PENDING', 'RETRY')
+              AND next_attempt_at <= NOW()
+            ORDER BY created_at
+            FOR UPDATE SKIP LOCKED
+            LIMIT 1
+            """, nativeQuery = true)
+    Optional<ProcessingJob> findNextIngestDocumentForUpdate();
+
     Optional<ProcessingJob> findByIdAndTenant_Id(UUID id, UUID tenantId);
 
     boolean existsByConsultation_IdAndTenant_IdAndJobTypeAndStatusIn(
