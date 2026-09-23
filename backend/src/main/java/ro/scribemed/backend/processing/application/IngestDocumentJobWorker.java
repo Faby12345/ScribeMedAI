@@ -16,7 +16,6 @@ import ro.scribemed.backend.knowledge.application.PdfService;
 import ro.scribemed.backend.knowledge.domain.KnowledgeDocument;
 import ro.scribemed.backend.knowledge.dto.ExtractedPage;
 import ro.scribemed.backend.processing.domain.ProcessingJob;
-import ro.scribemed.backend.processing.domain.ProcessingJobType;
 import ro.scribemed.backend.processing.infrastructure.ProcessingJobRepository;
 
 import java.io.IOException;
