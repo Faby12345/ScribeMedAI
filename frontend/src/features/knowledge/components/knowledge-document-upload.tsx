@@ -15,7 +15,7 @@ import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import {
   uploadKnowledgeDocument,
-  UploadPdfApiError,
+  UploadDocumentApiError,
 } from "@/features/knowledge/api/upload-pdf";
 import { cn } from "@/lib/class-names";
 
@@ -146,7 +146,7 @@ export function KnowledgeDocumentUpload() {
       setIsPrepared(true);
     } catch (error) {
       setSubmitError(
-        error instanceof UploadPdfApiError
+        error instanceof UploadDocumentApiError
           ? error.message
           : "Documentul nu a putut fi încărcat. Încearcă din nou.",
       );

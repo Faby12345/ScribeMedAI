@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { ButtonLink } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { getCurrentUser } from "@/features/auth/api/current-user";
-import { KnowledgeDocumentUpload } from "@/features/knowledge/components/knowledge-document-upload";
+import { KnowledgeLibrary } from "@/features/knowledge/components/knowledge-library";
 import { PatientAreaShell } from "@/features/patients/components/patient-area-shell";
 
 export default async function KnowledgePage() {
@@ -26,7 +26,7 @@ export default async function KnowledgePage() {
         }
       />
 
-      <KnowledgeDocumentUpload />
+      <KnowledgeLibrary />
     </PatientAreaShell>
   );
 }

@@ -5,6 +5,8 @@ import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import ro.scribemed.backend.knowledge.domain.KnowledgeChunk;
 import ro.scribemed.backend.knowledge.domain.KnowledgeDocument;
@@ -162,6 +164,32 @@ class KnowledgeServiceTest {
         );
         assertEquals(384, embeddingCaptor.getValue().length);
         assertEquals(8, pageableCaptor.getValue().getPageSize());
+    }
+
+    @Test
+    void retrievesAPageOfActiveDocumentsForTheTenant() {
+        Pageable pageable = PageRequest.of(1, 8);
+        KnowledgeDocument document = document();
+        when(documentRepository.findAllByTenant_IdAndStatus(
+                tenantId,
+                KnowledgeDocumentStatus.ACTIVE,
+                pageable
+        )).thenReturn(new PageImpl<>(
+                List.of(document, document, document, document),
+                pageable,
+                12
+        ));
+
+        var result = service.getActiveDocuments(tenantId, pageable);
+
+        assertEquals(12, result.getTotalElements());
+        assertEquals(2, result.getTotalPages());
+        assertEquals("ghid.pdf", result.getContent().getFirst().fileName());
+        verify(documentRepository).findAllByTenant_IdAndStatus(
+                tenantId,
+                KnowledgeDocumentStatus.ACTIVE,
+                pageable
+        );
     }
 
     @Test

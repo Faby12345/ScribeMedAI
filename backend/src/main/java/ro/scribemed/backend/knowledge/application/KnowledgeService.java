@@ -2,12 +2,15 @@ package ro.scribemed.backend.knowledge.application;
 
 import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ro.scribemed.backend.knowledge.domain.KnowledgeChunk;
 import ro.scribemed.backend.knowledge.domain.KnowledgeDocument;
 import ro.scribemed.backend.knowledge.domain.KnowledgeDocumentStatus;
+import ro.scribemed.backend.knowledge.dto.KnowledgeDocumentResponse;
 import ro.scribemed.backend.knowledge.infrastructure.KnowledgeChunkRepository;
 import ro.scribemed.backend.knowledge.infrastructure.KnowledgeDocumentRepository;
 import ro.scribemed.backend.tenancy.domain.Tenant;
@@ -84,12 +87,22 @@ public class KnowledgeService {
     }
 
     @Transactional(readOnly = true)
-    public List<KnowledgeDocument> getActiveDocuments(UUID tenantId) {
+    public Page<KnowledgeDocumentResponse> getActiveDocuments(
+            UUID tenantId,
+            Pageable pageable
+    ) {
         requireTenantId(tenantId);
-        return documentRepository.findAllByTenant_IdAndStatusOrderByCreatedAtDesc(
+        Objects.requireNonNull(pageable, "pageable must not be null");
+
+        return documentRepository.findAllByTenant_IdAndStatus(
                 tenantId,
-                KnowledgeDocumentStatus.ACTIVE
-        );
+                KnowledgeDocumentStatus.ACTIVE,
+                pageable
+        ).map(document -> new KnowledgeDocumentResponse(
+                document.getId(),
+                document.getOriginalFilename(),
+                document.getCreatedAt()
+        ));
     }
 
     @Transactional(readOnly = true)
