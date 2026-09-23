@@ -1,6 +1,7 @@
 package ro.scribemed.backend.knowledge.application;
 
 import jakarta.persistence.EntityExistsException;
+import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -161,6 +162,19 @@ class KnowledgeServiceTest {
         );
         assertEquals(384, embeddingCaptor.getValue().length);
         assertEquals(8, pageableCaptor.getValue().getPageSize());
+    }
+
+    @Test
+    void doesNotReturnADocumentOwnedByAnotherTenant() {
+        UUID documentId = UUID.randomUUID();
+        UUID otherTenantId = UUID.randomUUID();
+        when(documentRepository.findByIdAndTenant_Id(documentId, otherTenantId))
+                .thenReturn(Optional.empty());
+
+        assertThrows(
+                EntityNotFoundException.class,
+                () -> service.getDocument(otherTenantId, documentId)
+        );
     }
 
     private CreateKnowledgeDocumentCommand command(String checksum) {

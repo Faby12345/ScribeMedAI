@@ -36,8 +36,9 @@ class KnowledgeDocumentIngestionServiceTest {
         PdfService pdfService = mock(PdfService.class);
         KnowledgeService knowledgeService = mock(KnowledgeService.class);
         ProcessingJobRepository jobs = mock(ProcessingJobRepository.class);
+        Tenant tenant = new Tenant("Clinică test", TenantStatus.ACTIVE);
         when(tenants.findById(tenantId))
-                .thenReturn(Optional.of(new Tenant("Clinică test", TenantStatus.ACTIVE)));
+                .thenReturn(Optional.of(tenant));
         when(pdfService.store(eq(tenantId), any(), eq((long) pdf.length)))
                 .thenAnswer(invocation -> {
                     assertArrayEquals(pdf, invocation.<java.io.InputStream>getArgument(1).readAllBytes());
@@ -56,6 +57,7 @@ class KnowledgeDocumentIngestionServiceTest {
         );
 
         verify(pdfService).store(eq(tenantId), any(), eq((long) pdf.length));
+        verify(knowledgeService).createDocument(eq(tenant), any());
         verify(jobs).save(any());
     }
 

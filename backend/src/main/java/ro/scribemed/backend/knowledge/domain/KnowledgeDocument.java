@@ -11,6 +11,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import ro.scribemed.backend.tenancy.domain.Tenant;
 
 import java.time.Instant;
@@ -19,7 +20,13 @@ import java.util.Objects;
 import java.util.UUID;
 
 @Entity
-@Table(name = "knowledge_document")
+@Table(
+        name = "knowledge_document",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uq_knowledge_document_tenant_checksum",
+                columnNames = {"tenant_id", "checksum"}
+        )
+)
 public class KnowledgeDocument {
 
     @Id
@@ -52,7 +59,7 @@ public class KnowledgeDocument {
     @Column(name = "original_filename", nullable = false, length = 500)
     private String originalFilename;
 
-    @Column(nullable = false, unique = true, length = 64)
+    @Column(nullable = false, length = 64)
     private String checksum;
 
     @Column(name = "object_key", nullable = false, unique = true, length = 1000)
