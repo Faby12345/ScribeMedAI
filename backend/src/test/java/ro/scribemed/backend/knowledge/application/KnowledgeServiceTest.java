@@ -10,6 +10,7 @@ import ro.scribemed.backend.knowledge.domain.KnowledgeDocument;
 import ro.scribemed.backend.knowledge.domain.KnowledgeDocumentStatus;
 import ro.scribemed.backend.knowledge.infrastructure.KnowledgeChunkRepository;
 import ro.scribemed.backend.knowledge.infrastructure.KnowledgeDocumentRepository;
+import ro.scribemed.backend.tenancy.domain.Tenant;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -33,12 +34,17 @@ class KnowledgeServiceTest {
     private KnowledgeDocumentRepository documentRepository;
     private KnowledgeChunkRepository chunkRepository;
     private KnowledgeService service;
+    private Tenant tenant;
+    private UUID tenantId;
 
     @BeforeEach
     void setUp() {
         documentRepository = mock(KnowledgeDocumentRepository.class);
         chunkRepository = mock(KnowledgeChunkRepository.class);
         service = new KnowledgeService(documentRepository, chunkRepository);
+        tenantId = UUID.randomUUID();
+        tenant = mock(Tenant.class);
+        when(tenant.getId()).thenReturn(tenantId);
     }
 
     @Test
@@ -47,6 +53,7 @@ class KnowledgeServiceTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         KnowledgeDocument document = service.createDocument(
+                tenant,
                 new CreateKnowledgeDocumentCommand(
                         "  Ghid clinic  ",
                         "  Ministerul Sănătății  ",
@@ -69,11 +76,12 @@ class KnowledgeServiceTest {
     @Test
     void rejectsADuplicateDocumentChecksum() {
         String checksum = "b".repeat(64);
-        when(documentRepository.existsByChecksum(checksum)).thenReturn(true);
+        when(documentRepository.existsByTenant_IdAndChecksum(tenantId, checksum))
+                .thenReturn(true);
 
         assertThrows(
                 EntityExistsException.class,
-                () -> service.createDocument(command(checksum))
+                () -> service.createDocument(tenant, command(checksum))
         );
 
         verify(documentRepository, never()).save(any());
@@ -83,7 +91,7 @@ class KnowledgeServiceTest {
     void replacesChunksAndActivatesTheDocument() {
         UUID documentId = UUID.randomUUID();
         KnowledgeDocument document = document();
-        when(documentRepository.findById(documentId))
+        when(documentRepository.findByIdAndTenant_Id(documentId, tenantId))
                 .thenReturn(Optional.of(document));
         when(chunkRepository.saveAll(anyList()))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -94,6 +102,7 @@ class KnowledgeServiceTest {
         );
 
         List<KnowledgeChunk> chunks = service.replaceChunksAndActivate(
+                tenantId,
                 documentId,
                 drafts
         );
@@ -101,13 +110,16 @@ class KnowledgeServiceTest {
         assertEquals(KnowledgeDocumentStatus.ACTIVE, document.getStatus());
         assertEquals(0, chunks.get(0).getChunkIndex());
         assertEquals(1, chunks.get(1).getChunkIndex());
-        verify(chunkRepository).deleteAllByDocumentId(documentId);
+        verify(chunkRepository).deleteAllByTenantIdAndDocumentId(
+                tenantId,
+                documentId
+        );
     }
 
     @Test
     void rejectsAnEmbeddingWithTheWrongDimensions() {
         UUID documentId = UUID.randomUUID();
-        when(documentRepository.findById(documentId))
+        when(documentRepository.findByIdAndTenant_Id(documentId, tenantId))
                 .thenReturn(Optional.of(document()));
 
         EmbeddedKnowledgeChunkDraft invalid =
@@ -120,19 +132,21 @@ class KnowledgeServiceTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> service.replaceChunksAndActivate(
+                        tenantId,
                         documentId,
                         List.of(invalid)
                 )
         );
 
-        verify(chunkRepository, never()).deleteAllByDocumentId(any());
+        verify(chunkRepository, never())
+                .deleteAllByTenantIdAndDocumentId(any(), any());
     }
 
     @Test
     void retrievesOnlyActiveChunksWithTheRequestedLimit() {
         List<Double> embedding = embedding();
 
-        service.findRelevantChunks(embedding, 8);
+        service.findRelevantChunks(tenantId, embedding, 8);
 
         ArgumentCaptor<float[]> embeddingCaptor =
                 ArgumentCaptor.forClass(float[].class);
@@ -140,6 +154,7 @@ class KnowledgeServiceTest {
                 ArgumentCaptor.forClass(Pageable.class);
 
         verify(chunkRepository).findNearestByCosineDistance(
+                eq(tenantId),
                 embeddingCaptor.capture(),
                 eq(KnowledgeDocumentStatus.ACTIVE),
                 pageableCaptor.capture()
@@ -163,6 +178,7 @@ class KnowledgeServiceTest {
 
     private KnowledgeDocument document() {
         return new KnowledgeDocument(
+                tenant,
                 "Ghid clinic",
                 "Ministerul Sănătății",
                 null,

@@ -96,7 +96,11 @@ public class IngestDocumentJobWorker {
                                     chunkDrafts.get(index), null, embeddings.get(index)))
                             .toList();
             transactionTemplate.executeWithoutResult(status -> {
-                knowledgeService.replaceChunksAndActivate(job.documentId(), embeddedDrafts);
+                knowledgeService.replaceChunksAndActivate(
+                        job.tenantId(),
+                        job.documentId(),
+                        embeddedDrafts
+                );
                 processingJobRepository.findById(job.jobId())
                         .orElseThrow(() -> new IllegalStateException("Processing job not found"))
                         .markSucceeded(Instant.now());
@@ -132,7 +136,12 @@ public class IngestDocumentJobWorker {
         );
 
         KnowledgeDocument document = processingJob.getKnowledgeDocument();
-        return Optional.of(new ClaimedJob(processingJob.getId(), document.getId(), document.getObjectKey()));
+        return Optional.of(new ClaimedJob(
+                processingJob.getId(),
+                processingJob.getTenant().getId(),
+                document.getId(),
+                document.getObjectKey()
+        ));
     }
 
     private void markFailed(UUID jobId, String errorCode) {
@@ -143,12 +152,20 @@ public class IngestDocumentJobWorker {
             job.markRetry(errorCode, "Document processing failed", Instant.now().plus(Duration.ofSeconds(30)));
         } else {
             job.markFailed(errorCode, "Document processing failed", Instant.now());
-            knowledgeService.markDocumentFailed(job.getKnowledgeDocument().getId());
+            knowledgeService.markDocumentFailed(
+                    job.getTenant().getId(),
+                    job.getKnowledgeDocument().getId()
+            );
         }
         log.warn("ingest_document_job_failed tenantId={} jobId={} errorCode={} willRetry={}",
                 job.getTenant().getId(), jobId, errorCode, willRetry);
     }
 
-    private record ClaimedJob(UUID jobId, UUID documentId, String objectKey) {
+    private record ClaimedJob(
+            UUID jobId,
+            UUID tenantId,
+            UUID documentId,
+            String objectKey
+    ) {
     }
 }

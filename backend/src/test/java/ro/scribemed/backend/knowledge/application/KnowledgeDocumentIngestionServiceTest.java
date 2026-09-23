@@ -43,7 +43,7 @@ class KnowledgeDocumentIngestionServiceTest {
                     assertArrayEquals(pdf, invocation.<java.io.InputStream>getArgument(1).readAllBytes());
                     return new StoredPdf("tenant/test/knowledge/file.pdf", "a".repeat(64), pdf.length);
                 });
-        when(knowledgeService.createDocument(any()))
+        when(knowledgeService.createDocument(any(), any()))
                 .thenReturn(mock(KnowledgeDocument.class));
 
         KnowledgeDocumentIngestionService service = new KnowledgeDocumentIngestionService(

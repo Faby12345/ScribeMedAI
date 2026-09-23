@@ -11,11 +11,12 @@ import java.util.UUID;
 public interface KnowledgeDocumentRepository
         extends JpaRepository<KnowledgeDocument, UUID> {
 
-    Optional<KnowledgeDocument> findByChecksum(String checksum);
+    Optional<KnowledgeDocument> findByIdAndTenant_Id(UUID id, UUID tenantId);
 
-    boolean existsByChecksum(String checksum);
+    boolean existsByTenant_IdAndChecksum(UUID tenantId, String checksum);
 
-    List<KnowledgeDocument> findAllByStatusOrderByCreatedAtDesc(
+    List<KnowledgeDocument> findAllByTenant_IdAndStatusOrderByCreatedAtDesc(
+            UUID tenantId,
             KnowledgeDocumentStatus status
     );
 }

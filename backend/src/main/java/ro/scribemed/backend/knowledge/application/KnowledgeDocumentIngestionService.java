@@ -63,6 +63,7 @@ public class KnowledgeDocumentIngestionService {
                 appUser.tenantId(), new ByteArrayInputStream(pdfBytes), sizeBytes);
 
         KnowledgeDocument knowledgeDocument = knowledgeService.createDocument(
+                tenant,
                 new CreateKnowledgeDocumentCommand(
                         dto.title(),
                         dto.sourceInstitution(),

@@ -10,6 +10,7 @@ import ro.scribemed.backend.knowledge.domain.KnowledgeDocument;
 import ro.scribemed.backend.knowledge.domain.KnowledgeDocumentStatus;
 import ro.scribemed.backend.knowledge.infrastructure.KnowledgeChunkRepository;
 import ro.scribemed.backend.knowledge.infrastructure.KnowledgeDocumentRepository;
+import ro.scribemed.backend.tenancy.domain.Tenant;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -38,18 +39,24 @@ public class KnowledgeService {
 
     @Transactional
     public KnowledgeDocument createDocument(
+            Tenant tenant,
             CreateKnowledgeDocumentCommand command
     ) {
+        Objects.requireNonNull(tenant, "tenant must not be null");
         Objects.requireNonNull(command, "command must not be null");
 
         String checksum = normalizeChecksum(command.checksum());
-        if (documentRepository.existsByChecksum(checksum)) {
+        if (documentRepository.existsByTenant_IdAndChecksum(
+                tenant.getId(),
+                checksum
+        )) {
             throw new EntityExistsException(
                     "A knowledge document with this checksum already exists"
             );
         }
 
         KnowledgeDocument document = new KnowledgeDocument(
+                tenant,
                 normalizeRequired(command.title(), "title", 500),
                 normalizeRequired(
                         command.sourceInstitution(),
@@ -72,35 +79,44 @@ public class KnowledgeService {
     }
 
     @Transactional(readOnly = true)
-    public KnowledgeDocument getDocument(UUID documentId) {
-        return requireDocument(documentId);
+    public KnowledgeDocument getDocument(UUID tenantId, UUID documentId) {
+        return requireDocument(tenantId, documentId);
     }
 
     @Transactional(readOnly = true)
-    public List<KnowledgeDocument> getActiveDocuments() {
-        return documentRepository.findAllByStatusOrderByCreatedAtDesc(
+    public List<KnowledgeDocument> getActiveDocuments(UUID tenantId) {
+        requireTenantId(tenantId);
+        return documentRepository.findAllByTenant_IdAndStatusOrderByCreatedAtDesc(
+                tenantId,
                 KnowledgeDocumentStatus.ACTIVE
         );
     }
 
     @Transactional(readOnly = true)
-    public List<KnowledgeChunk> getDocumentChunks(UUID documentId) {
-        requireDocument(documentId);
-        return chunkRepository.findAllByDocument_IdOrderByChunkIndex(documentId);
+    public List<KnowledgeChunk> getDocumentChunks(
+            UUID tenantId,
+            UUID documentId
+    ) {
+        requireDocument(tenantId, documentId);
+        return chunkRepository.findAllByTenant_IdAndDocument_IdOrderByChunkIndex(
+                tenantId,
+                documentId
+        );
     }
 
     @Transactional
     public List<KnowledgeChunk> replaceChunksAndActivate(
+            UUID tenantId,
             UUID documentId,
             List<EmbeddedKnowledgeChunkDraft> chunkDrafts
     ) {
-        KnowledgeDocument document = requireDocument(documentId);
+        KnowledgeDocument document = requireDocument(tenantId, documentId);
         requireProcessing(document);
 
         List<EmbeddedKnowledgeChunkDraft> validatedDrafts =
                 validateAndOrderChunks(chunkDrafts);
 
-        chunkRepository.deleteAllByDocumentId(documentId);
+        chunkRepository.deleteAllByTenantIdAndDocumentId(tenantId, documentId);
 
         List<KnowledgeChunk> chunks = validatedDrafts.stream()
                 .map(draft -> toEntity(document, draft))
@@ -112,22 +128,24 @@ public class KnowledgeService {
     }
 
     @Transactional
-    public void markDocumentFailed(UUID documentId) {
-        KnowledgeDocument document = requireDocument(documentId);
+    public void markDocumentFailed(UUID tenantId, UUID documentId) {
+        KnowledgeDocument document = requireDocument(tenantId, documentId);
         document.markFailed();
     }
 
     @Transactional
-    public void archiveDocument(UUID documentId) {
-        KnowledgeDocument document = requireDocument(documentId);
+    public void archiveDocument(UUID tenantId, UUID documentId) {
+        KnowledgeDocument document = requireDocument(tenantId, documentId);
         document.archive();
     }
 
     @Transactional(readOnly = true)
     public List<KnowledgeChunk> findRelevantChunks(
+            UUID tenantId,
             List<Double> queryEmbedding,
             int limit
     ) {
+        requireTenantId(tenantId);
         float[] embedding = validateAndConvertEmbedding(queryEmbedding);
         if (limit <= 0 || limit > MAX_RETRIEVAL_LIMIT) {
             throw new IllegalArgumentException(
@@ -136,18 +154,24 @@ public class KnowledgeService {
         }
 
         return chunkRepository.findNearestByCosineDistance(
+                tenantId,
                 embedding,
                 KnowledgeDocumentStatus.ACTIVE,
                 PageRequest.of(0, limit)
         );
     }
 
-    private KnowledgeDocument requireDocument(UUID documentId) {
+    private KnowledgeDocument requireDocument(UUID tenantId, UUID documentId) {
+        requireTenantId(tenantId);
         Objects.requireNonNull(documentId, "documentId must not be null");
-        return documentRepository.findById(documentId)
+        return documentRepository.findByIdAndTenant_Id(documentId, tenantId)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Knowledge document not found"
                 ));
+    }
+
+    private void requireTenantId(UUID tenantId) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
     }
 
     private void requireProcessing(KnowledgeDocument document) {

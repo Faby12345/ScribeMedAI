@@ -13,6 +13,9 @@ import org.testcontainers.utility.DockerImageName;
 import ro.scribemed.backend.knowledge.domain.KnowledgeChunk;
 import ro.scribemed.backend.knowledge.domain.KnowledgeDocument;
 import ro.scribemed.backend.knowledge.domain.KnowledgeDocumentStatus;
+import ro.scribemed.backend.tenancy.domain.Tenant;
+import ro.scribemed.backend.tenancy.domain.TenantStatus;
+import ro.scribemed.backend.tenancy.infrastructure.TenantRepository;
 
 import java.util.List;
 
@@ -39,10 +42,20 @@ class KnowledgeRepositoryIntegrationTest {
     @Autowired
     private KnowledgeChunkRepository chunkRepository;
 
+    @Autowired
+    private TenantRepository tenantRepository;
+
     @Test
     void persistsVectorsAndRetrievesTheNearestActiveChunk() {
+        Tenant tenant = tenantRepository.saveAndFlush(
+                new Tenant("Clinică A", TenantStatus.ACTIVE)
+        );
+        Tenant otherTenant = tenantRepository.saveAndFlush(
+                new Tenant("Clinică B", TenantStatus.ACTIVE)
+        );
         KnowledgeDocument document = documentRepository.saveAndFlush(
                 new KnowledgeDocument(
+                        tenant,
                         "Ghid clinic",
                         "Ministerul Sănătății",
                         null,
@@ -51,6 +64,19 @@ class KnowledgeRepositoryIntegrationTest {
                         "ghid.pdf",
                         "d".repeat(64),
                         "tenant/test/knowledge/ghid.pdf"
+                )
+        );
+        KnowledgeDocument otherDocument = documentRepository.saveAndFlush(
+                new KnowledgeDocument(
+                        otherTenant,
+                        "Ghidul altei clinici",
+                        "Ministerul Sănătății",
+                        null,
+                        null,
+                        null,
+                        "ghid.pdf",
+                        "d".repeat(64),
+                        "tenant/other/knowledge/ghid.pdf"
                 )
         );
 
@@ -75,13 +101,24 @@ class KnowledgeRepositoryIntegrationTest {
                         2,
                         null,
                         distantEmbedding
+                ),
+                new KnowledgeChunk(
+                        otherDocument,
+                        0,
+                        "Fragmentul altei clinici",
+                        1,
+                        1,
+                        null,
+                        closeEmbedding
                 )
         ));
         document.markActive();
+        otherDocument.markActive();
         documentRepository.flush();
 
         List<KnowledgeChunk> result =
                 chunkRepository.findNearestByCosineDistance(
+                        tenant.getId(),
                         closeEmbedding,
                         KnowledgeDocumentStatus.ACTIVE,
                         PageRequest.of(0, 1)
@@ -89,6 +126,7 @@ class KnowledgeRepositoryIntegrationTest {
 
         assertEquals(1, result.size());
         assertEquals("Fragment apropiat", result.getFirst().getContent());
+        assertEquals(tenant.getId(), result.getFirst().getTenant().getId());
     }
 
     private float[] embedding(float first, float second) {

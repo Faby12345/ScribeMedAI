@@ -14,20 +14,33 @@ import java.util.UUID;
 public interface KnowledgeChunkRepository
         extends JpaRepository<KnowledgeChunk, UUID> {
 
-    List<KnowledgeChunk> findAllByDocument_IdOrderByChunkIndex(UUID documentId);
+    List<KnowledgeChunk> findAllByTenant_IdAndDocument_IdOrderByChunkIndex(
+            UUID tenantId,
+            UUID documentId
+    );
 
     @Modifying(flushAutomatically = true)
-    @Query("delete from KnowledgeChunk chunk where chunk.document.id = :documentId")
-    int deleteAllByDocumentId(@Param("documentId") UUID documentId);
+    @Query("""
+            delete from KnowledgeChunk chunk
+            where chunk.tenant.id = :tenantId
+              and chunk.document.id = :documentId
+            """)
+    int deleteAllByTenantIdAndDocumentId(
+            @Param("tenantId") UUID tenantId,
+            @Param("documentId") UUID documentId
+    );
 
     @Query("""
             select chunk
             from KnowledgeChunk chunk
             join fetch chunk.document document
-            where document.status = :status
+            where chunk.tenant.id = :tenantId
+              and document.tenant.id = :tenantId
+              and document.status = :status
             order by cosine_distance(chunk.embedding, :embedding)
             """)
     List<KnowledgeChunk> findNearestByCosineDistance(
+            @Param("tenantId") UUID tenantId,
             @Param("embedding") float[] embedding,
             @Param("status") KnowledgeDocumentStatus status,
             Pageable pageable
