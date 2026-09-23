@@ -161,6 +161,23 @@ body {
   .side-panel-exit {
     animation: side-panel-exit 180ms cubic-bezier(0.7, 0, 0.84, 0) both;
   }
+
+  .navigation-drawer::backdrop {
+    background: rgb(16 24 40 / 38%);
+    animation: navigation-backdrop-enter 220ms ease-out both;
+  }
+
+  .navigation-drawer-panel {
+    animation: navigation-drawer-enter 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .navigation-drawer[data-closing="true"]::backdrop {
+    animation: navigation-backdrop-exit 160ms ease-in both;
+  }
+
+  .navigation-drawer[data-closing="true"] .navigation-drawer-panel {
+    animation: navigation-drawer-exit 180ms cubic-bezier(0.7, 0, 0.84, 0) both;
+  }
 }
 
 @keyframes panel-overlay-enter {
@@ -207,11 +224,59 @@ body {
   }
 }
 
+@keyframes navigation-backdrop-enter {
+  from {
+    background: rgb(16 24 40 / 0%);
+  }
+
+  to {
+    background: rgb(16 24 40 / 38%);
+  }
+}
+
+@keyframes navigation-backdrop-exit {
+  from {
+    background: rgb(16 24 40 / 38%);
+  }
+
+  to {
+    background: rgb(16 24 40 / 0%);
+  }
+}
+
+@keyframes navigation-drawer-enter {
+  from {
+    clip-path: inset(0 10% 0 0);
+    transform: translateX(-100%);
+  }
+
+  to {
+    clip-path: inset(0);
+    transform: translateX(0);
+  }
+}
+
+@keyframes navigation-drawer-exit {
+  from {
+    clip-path: inset(0);
+    transform: translateX(0);
+  }
+
+  to {
+    clip-path: inset(0 10% 0 0);
+    transform: translateX(-100%);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .panel-overlay-enter,
   .panel-overlay-exit,
   .side-panel-enter,
-  .side-panel-exit {
+  .side-panel-exit,
+  .navigation-drawer::backdrop,
+  .navigation-drawer-panel,
+  .navigation-drawer[data-closing="true"]::backdrop,
+  .navigation-drawer[data-closing="true"] .navigation-drawer-panel {
     animation: none;
   }
 }
