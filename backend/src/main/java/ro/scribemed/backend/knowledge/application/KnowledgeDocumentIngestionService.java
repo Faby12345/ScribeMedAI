@@ -15,6 +15,7 @@ import ro.scribemed.backend.processing.infrastructure.ProcessingJobRepository;
 import ro.scribemed.backend.tenancy.domain.Tenant;
 import ro.scribemed.backend.tenancy.infrastructure.TenantRepository;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -44,7 +45,7 @@ public class KnowledgeDocumentIngestionService {
     public void process(
             CurrentUser appUser,
             InputStream inputStream,
-            long sizeByets,
+            long sizeBytes,
             String originalFileName,
             KnowledgeDocumentRequest dto) throws IOException
     {
@@ -52,10 +53,14 @@ public class KnowledgeDocumentIngestionService {
                         .orElseThrow(() -> new EntityNotFoundException("Tenant not found"));
 
 
-        PdfValidator.validate(inputStream, sizeByets);
+        if (sizeBytes <= 0 || sizeBytes > PdfValidator.MAX_PDF_SIZE_BYTES) {
+            throw new IllegalArgumentException("Invalid PDF file size");
+        }
+        byte[] pdfBytes = inputStream.readNBytes((int) PdfValidator.MAX_PDF_SIZE_BYTES + 1);
+        PdfValidator.validate(new ByteArrayInputStream(pdfBytes), sizeBytes);
 
-
-        StoredPdf storedPdf = pdfService.store(appUser.tenantId(), inputStream, sizeByets);
+        StoredPdf storedPdf = pdfService.store(
+                appUser.tenantId(), new ByteArrayInputStream(pdfBytes), sizeBytes);
 
         KnowledgeDocument knowledgeDocument = knowledgeService.createDocument(
                 new CreateKnowledgeDocumentCommand(
