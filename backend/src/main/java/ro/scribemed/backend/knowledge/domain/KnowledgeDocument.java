@@ -6,11 +6,16 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import ro.scribemed.backend.tenancy.domain.Tenant;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -20,6 +25,10 @@ public class KnowledgeDocument {
     @Id
     @GeneratedValue
     private UUID id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "tenant_id", nullable = false, updatable = false)
+    private Tenant tenant;
 
     @Column(nullable = false, length = 500)
     private String title;
@@ -57,6 +66,7 @@ public class KnowledgeDocument {
     }
 
     public KnowledgeDocument(
+            Tenant tenant,
             String title,
             String sourceInstitution,
             String sourceUrl,
@@ -66,6 +76,7 @@ public class KnowledgeDocument {
             String checksum,
             String objectKey
     ) {
+        this.tenant = Objects.requireNonNull(tenant, "tenant must not be null");
         this.title = title;
         this.sourceInstitution = sourceInstitution;
         this.sourceUrl = sourceUrl;
@@ -116,6 +127,10 @@ public class KnowledgeDocument {
 
     public UUID getId() {
         return id;
+    }
+
+    public Tenant getTenant() {
+        return tenant;
     }
 
     public String getTitle() {

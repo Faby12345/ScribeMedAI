@@ -12,6 +12,7 @@ import jakarta.persistence.Table;
 import org.hibernate.annotations.Array;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import ro.scribemed.backend.tenancy.domain.Tenant;
 
 import java.time.Instant;
 import java.util.Arrays;
@@ -26,6 +27,10 @@ public class KnowledgeChunk {
     @Id
     @GeneratedValue
     private UUID id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "tenant_id", nullable = false, updatable = false)
+    private Tenant tenant;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "document_id", nullable = false, updatable = false)
@@ -68,6 +73,7 @@ public class KnowledgeChunk {
             float[] embedding
     ) {
         this.document = document;
+        this.tenant = document.getTenant();
         this.chunkIndex = chunkIndex;
         this.content = content;
         this.pageFrom = pageFrom;
@@ -89,6 +95,10 @@ public class KnowledgeChunk {
 
     public KnowledgeDocument getDocument() {
         return document;
+    }
+
+    public Tenant getTenant() {
+        return tenant;
     }
 
     public int getChunkIndex() {

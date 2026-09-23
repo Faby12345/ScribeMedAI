@@ -84,7 +84,7 @@ export function AppShell({ children }: AppShellProps) {
           <button
             type="button"
             onClick={openNavigation}
-            className="group flex size-11 shrink-0 flex-col items-center justify-center gap-[0.3rem] rounded-[var(--radius-control)] border border-border bg-surface text-foreground shadow-surface transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="group flex size-11 shrink-0 flex-col items-center justify-center gap-[0.3rem]  bg-surface text-foreground shadow-surface transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             aria-label="Deschide meniul principal"
             aria-haspopup="dialog"
             aria-controls="main-navigation-drawer"
