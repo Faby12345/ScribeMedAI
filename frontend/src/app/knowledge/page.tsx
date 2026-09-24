@@ -20,9 +20,14 @@ export default async function KnowledgePage() {
         title="Bibliotecă de cunoștințe"
         description="Adaugă surse medicale PDF care vor putea fi consultate de sistem atunci când generează răspunsuri bazate pe documente."
         actions={
-          <ButtonLink href="/dashboard" variant="outline">
-            Înapoi la panou
-          </ButtonLink>
+          <>
+            <ButtonLink href="/dashboard" variant="outline">
+              Înapoi la panou
+            </ButtonLink>
+            <ButtonLink href="/knowledge/chat">
+              Deschide asistentul
+            </ButtonLink>
+          </>
         }
       />
 

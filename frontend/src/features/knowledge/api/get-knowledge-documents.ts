@@ -62,6 +62,23 @@ export async function getKnowledgeDocuments({
   return documentsPage;
 }
 
+export async function getAllKnowledgeDocuments(): Promise<KnowledgeDocument[]> {
+  const pageSize = 100;
+  const firstPage = await getKnowledgeDocuments({ page: 0, size: pageSize });
+
+  if (firstPage.totalPages <= 1) {
+    return firstPage.content;
+  }
+
+  const remainingPages = await Promise.all(
+    Array.from({ length: firstPage.totalPages - 1 }, (_, index) =>
+      getKnowledgeDocuments({ page: index + 1, size: pageSize }),
+    ),
+  );
+
+  return [firstPage, ...remainingPages].flatMap((page) => page.content);
+}
+
 function isPaginatedKnowledgeResponse(
   value: unknown,
 ): value is PaginatedResponse<KnowledgeDocument> {
