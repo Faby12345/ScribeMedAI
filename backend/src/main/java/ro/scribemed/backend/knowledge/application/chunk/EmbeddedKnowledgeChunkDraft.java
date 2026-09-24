@@ -1,4 +1,4 @@
-package ro.scribemed.backend.knowledge.application;
+package ro.scribemed.backend.knowledge.application.chunk;
 
 import java.util.List;
 import java.util.Objects;

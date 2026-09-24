@@ -5,6 +5,8 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.junit.jupiter.api.Test;
 import ro.scribemed.backend.audit.application.AuditService;
 import ro.scribemed.backend.identity.security.CurrentUser;
+import ro.scribemed.backend.knowledge.application.chunk.ChunkingService;
+import ro.scribemed.backend.knowledge.application.pdf.PdfService;
 import ro.scribemed.backend.knowledge.domain.KnowledgeDocument;
 import ro.scribemed.backend.knowledge.dto.KnowledgeDocumentRequest;
 import ro.scribemed.backend.knowledge.dto.StoredPdf;

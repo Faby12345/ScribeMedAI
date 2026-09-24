@@ -12,9 +12,11 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import ro.scribemed.backend.identity.security.CurrentUser;
 import ro.scribemed.backend.knowledge.application.KnowledgeDocumentIngestionService;
+import ro.scribemed.backend.knowledge.application.KnowledgeQueryService;
 import ro.scribemed.backend.knowledge.application.KnowledgeService;
 import ro.scribemed.backend.knowledge.dto.KnowledgeDocumentRequest;
 import ro.scribemed.backend.knowledge.dto.KnowledgeDocumentResponse;
+import ro.scribemed.backend.knowledge.dto.SearchQueryRequest;
 
 import java.io.IOException;
 
@@ -24,11 +26,16 @@ public class KnowledgeController {
 
     private final KnowledgeDocumentIngestionService knowledgeDocumentIngestionService;
     private final KnowledgeService knowledgeService;
+    private final KnowledgeQueryService knowledgeQueryService;
 
 
-    public KnowledgeController(KnowledgeDocumentIngestionService knowledgeDocumentIngestionService, KnowledgeService knowledgeService) {
+    public KnowledgeController(
+            KnowledgeDocumentIngestionService knowledgeDocumentIngestionService,
+            KnowledgeService knowledgeService, KnowledgeQueryService knowledgeQueryService
+    ) {
         this.knowledgeDocumentIngestionService = knowledgeDocumentIngestionService;
         this.knowledgeService = knowledgeService;
+        this.knowledgeQueryService = knowledgeQueryService;
     }
 
     @PostMapping(
@@ -69,6 +76,18 @@ public class KnowledgeController {
                         currentUser.tenantId(),
                         pageable
                 )
+        );
+    }
+
+    @PostMapping("/query")
+    public ResponseEntity<?> findDataViaRAG(
+            @Valid @RequestBody SearchQueryRequest request,
+            @AuthenticationPrincipal CurrentUser currentUser
+
+    )
+    {
+        return ResponseEntity.ok(
+                knowledgeQueryService.query(currentUser.tenantId(), request)
         );
     }
 

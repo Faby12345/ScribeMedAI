@@ -1,6 +1,7 @@
 package ro.scribemed.backend.knowledge.application;
 
 import org.springframework.stereotype.Service;
+import ro.scribemed.backend.knowledge.application.pdf.PdfService;
 import ro.scribemed.backend.knowledge.dto.ExtractedPage;
 
 import java.io.IOException;

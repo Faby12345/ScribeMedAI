@@ -8,6 +8,8 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import ro.scribemed.backend.knowledge.application.chunk.EmbeddedKnowledgeChunkDraft;
+import ro.scribemed.backend.knowledge.application.chunk.KnowledgeChunkDraft;
 import ro.scribemed.backend.knowledge.domain.KnowledgeChunk;
 import ro.scribemed.backend.knowledge.domain.KnowledgeDocument;
 import ro.scribemed.backend.knowledge.domain.KnowledgeDocumentStatus;

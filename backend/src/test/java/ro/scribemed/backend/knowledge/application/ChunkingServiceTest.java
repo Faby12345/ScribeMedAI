@@ -1,6 +1,8 @@
 package ro.scribemed.backend.knowledge.application;
 
 import org.junit.jupiter.api.Test;
+import ro.scribemed.backend.knowledge.application.chunk.ChunkingService;
+import ro.scribemed.backend.knowledge.application.chunk.KnowledgeChunkDraft;
 import ro.scribemed.backend.knowledge.dto.ExtractedPage;
 
 import java.util.List;

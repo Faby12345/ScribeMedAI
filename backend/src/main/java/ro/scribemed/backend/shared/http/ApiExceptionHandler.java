@@ -17,6 +17,7 @@ import ro.scribemed.backend.consultation.application.exception.TranscriptNotAvai
 import ro.scribemed.backend.consultation.application.exception.UnsupportedAudioTypeException;
 import ro.scribemed.backend.document.application.DocumentStateException;
 import ro.scribemed.backend.identity.application.AuthenticationException;
+import ro.scribemed.backend.knowledge.application.KnowledgeAnswerProviderException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -98,6 +99,17 @@ public class ApiExceptionHandler {
                 .body(new ApiErrorResponse(
                         "AUTHENTICATION_FAILED",
                         "Emailul sau parola sunt incorecte."
+                ));
+    }
+
+    @ExceptionHandler(KnowledgeAnswerProviderException.class)
+    ResponseEntity<ApiErrorResponse> handleKnowledgeAnswerProviderException(
+            KnowledgeAnswerProviderException exception
+    ) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(new ApiErrorResponse(
+                        exception.getSafeErrorCode(),
+                        "Răspunsul nu a putut fi generat. Încercați din nou."
                 ));
     }
 

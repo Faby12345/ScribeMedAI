@@ -1,4 +1,4 @@
-package ro.scribemed.backend.knowledge.application;
+package ro.scribemed.backend.knowledge.application.pdf;
 
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -10,7 +10,7 @@ import java.util.Arrays;
 
 public final class PdfValidator {
 
-    static final long MAX_PDF_SIZE_BYTES = 25L * 1024 * 1024;
+    public static final long MAX_PDF_SIZE_BYTES = 25L * 1024 * 1024;
 
     private static final byte[] PDF_HEADER = "%PDF-"
             .getBytes(StandardCharsets.US_ASCII);

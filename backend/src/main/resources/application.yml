@@ -101,4 +101,4 @@ scribemed:
     huggingface:
       api-key: ${HF_TOKEN:}
       base-url: ${HUGGINGFACE_BASE_URL:https://router.huggingface.co/v1}
-
+      knowledge-model: ${HUGGINGFACE_KNOWLEDGE_MODEL:Qwen/Qwen3-32B:cheapest}

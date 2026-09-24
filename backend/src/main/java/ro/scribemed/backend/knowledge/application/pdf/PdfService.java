@@ -1,10 +1,9 @@
-package ro.scribemed.backend.knowledge.application;
+package ro.scribemed.backend.knowledge.application.pdf;
 
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.stereotype.Service;
-import ro.scribemed.backend.identity.domain.AppUser;
 import ro.scribemed.backend.knowledge.dto.ExtractedPage;
 import ro.scribemed.backend.knowledge.dto.StoredPdf;
 

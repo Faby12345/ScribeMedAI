@@ -1,4 +1,4 @@
-package ro.scribemed.backend.knowledge.application;
+package ro.scribemed.backend.knowledge.application.chunk;
 
 import org.springframework.stereotype.Service;
 import ro.scribemed.backend.knowledge.dto.ExtractedPage;
@@ -26,7 +26,7 @@ public class ChunkingService {
         this(DEFAULT_MAX_WORDS, DEFAULT_OVERLAP_WORDS);
     }
 
-    ChunkingService(int maxWords, int overlapWords) {
+    public ChunkingService(int maxWords, int overlapWords) {
         if (maxWords <= 0) {
             throw new IllegalArgumentException("maxWords must be greater than zero");
         }

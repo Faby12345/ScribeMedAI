@@ -4,7 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 
 import org.springframework.stereotype.Service;
 import ro.scribemed.backend.audit.application.AuditService;
-import ro.scribemed.backend.knowledge.application.PdfService;
+import ro.scribemed.backend.knowledge.application.pdf.PdfService;
 import ro.scribemed.backend.knowledge.dto.StoredPdf;
 
 import java.io.IOException;

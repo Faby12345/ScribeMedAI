@@ -7,6 +7,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ro.scribemed.backend.knowledge.application.chunk.EmbeddedKnowledgeChunkDraft;
+import ro.scribemed.backend.knowledge.application.chunk.KnowledgeChunkDraft;
 import ro.scribemed.backend.knowledge.domain.KnowledgeChunk;
 import ro.scribemed.backend.knowledge.domain.KnowledgeDocument;
 import ro.scribemed.backend.knowledge.domain.KnowledgeDocumentStatus;
@@ -324,5 +326,48 @@ public class KnowledgeService {
             );
         }
         return normalized;
+    }
+    @Transactional(readOnly = true)
+    public List<KnowledgeChunk> findRelevantChunks(
+            UUID tenantId,
+            List<UUID> documentIds,
+            List<Double> queryEmbedding,
+            int limit
+    ) {
+        requireTenantId(tenantId);
+
+        float[] embedding = validateAndConvertEmbedding(queryEmbedding);
+
+        if (limit <= 0 || limit > MAX_RETRIEVAL_LIMIT) {
+            throw new IllegalArgumentException(
+                    "limit must be between 1 and " + MAX_RETRIEVAL_LIMIT
+            );
+        }
+
+        if (documentIds == null || documentIds.isEmpty()) {
+            return chunkRepository.findNearestByCosineDistance(
+                    tenantId,
+                    embedding,
+                    KnowledgeDocumentStatus.ACTIVE,
+                    PageRequest.of(0, limit)
+            );
+        }
+
+        List<UUID> uniqueDocumentIds = documentIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        if (uniqueDocumentIds.isEmpty() || uniqueDocumentIds.size() > 20) {
+            throw new IllegalArgumentException("Invalid document selection");
+        }
+
+        return chunkRepository.findNearestByCosineDistanceAndDocumentIds(
+                tenantId,
+                uniqueDocumentIds,
+                embedding,
+                KnowledgeDocumentStatus.ACTIVE,
+                PageRequest.of(0, limit)
+        );
     }
 }

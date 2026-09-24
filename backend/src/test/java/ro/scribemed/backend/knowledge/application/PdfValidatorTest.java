@@ -3,6 +3,7 @@ package ro.scribemed.backend.knowledge.application;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.junit.jupiter.api.Test;
+import ro.scribemed.backend.knowledge.application.pdf.PdfValidator;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
