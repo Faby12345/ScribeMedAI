@@ -27,7 +27,9 @@ export function PageHeader({
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div className="min-w-0">
           {eyebrow ? <div>{eyebrow}</div> : null}
-          <h1 className="page-title mt-3">{title}</h1>
+          <h1 className={cn("page-title", eyebrow ? "mt-3" : undefined)}>
+            {title}
+          </h1>
           {description ? (
             <p className="secondary-text mt-2 max-w-2xl">{description}</p>
           ) : null}

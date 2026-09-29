@@ -25,7 +25,15 @@ type FormErrors = Partial<
   Record<"file" | "title" | "sourceInstitution" | "sourceUrl", string>
 >;
 
-export function KnowledgeDocumentUpload() {
+type KnowledgeDocumentUploadProps = {
+  onClose?: () => void;
+  onUploaded?: () => void;
+};
+
+export function KnowledgeDocumentUpload({
+  onClose,
+  onUploaded,
+}: KnowledgeDocumentUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
@@ -144,6 +152,7 @@ export function KnowledgeDocumentUpload() {
       });
 
       setIsPrepared(true);
+      onUploaded?.();
     } catch (error) {
       setSubmitError(
         error instanceof UploadDocumentApiError
@@ -158,12 +167,25 @@ export function KnowledgeDocumentUpload() {
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
       <Card>
-        <CardHeader className="border-b border-border pb-5">
-          <h2 className="section-title">Document nou</h2>
-          <p className="secondary-text max-w-2xl">
-            Selectează fișierul și descrie sursa astfel încât să poată fi
-            identificată corect ulterior.
-          </p>
+        <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 border-b border-border pb-5">
+          <div>
+            <h2 className="section-title">Document nou</h2>
+            <p className="secondary-text mt-1 max-w-2xl">
+              Selectează fișierul și descrie sursa astfel încât să poată fi
+              identificată corect ulterior.
+            </p>
+          </div>
+          {onClose ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={isSubmitting}
+              onClick={onClose}
+            >
+              Închide
+            </Button>
+          ) : null}
         </CardHeader>
 
         <CardContent className="pt-5">

@@ -92,7 +92,7 @@ export function KnowledgeDocumentList() {
         <SectionHeading totalDocuments={0} />
         <EmptyState
           title="Biblioteca nu conține încă documente disponibile."
-          description="Încarcă primul PDF mai jos. Documentul va apărea aici după finalizarea procesării."
+          description="Folosește acțiunea «Adaugă document» pentru a încărca primul PDF. Acesta va apărea aici după finalizarea procesării."
         />
       </section>
     );
