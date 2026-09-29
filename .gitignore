@@ -73,3 +73,5 @@ generated/
 *.m4a
 *.ogg
 *.pdf
+
+/backend/.env
