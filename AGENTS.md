@@ -17,6 +17,13 @@ ScribeMedAI is a medical documentation MVP that supports the following workflow:
 
 This MVP is not a complete EHR and does not currently include SIUI integration, billing, scheduling, automated diagnosis, or clinical recommendations.
 
+## Product language
+
+* ScribeMedAI targets the Romanian market.
+* All product-facing UI text, page metadata, validation messages, emails, exported document labels, notifications, and support/help copy must be written in Romanian by default.
+* Do not introduce English user-facing text unless the user explicitly requests it or the text is a technical identifier that should not be translated.
+* Keep code identifiers, API field names, database names, logs, and internal technical messages in English unless there is a clear project convention requiring Romanian.
+
 ## Required architecture reference
 
 Before implementing, refactoring, reviewing, or proposing architectural changes, read:
@@ -63,15 +70,237 @@ Respect the existing directory names. Do not rename or reorganize the repository
 * Tenant isolation must be enforced in the application and repository layers.
 * Do not introduce microservices, RabbitMQ, Kafka, Kubernetes, or a vector database unless explicitly approved.
 
-### Frontend
+## Frontend design system
 
-* Next.js and React provide the user interface.
-* The frontend should call same-origin `/api/*` endpoints.
-* Requests under `/api/*` are proxied or routed to Spring Boot.
-* Do not duplicate medical-domain or business logic in Next.js.
-* Do not create a Next.js Route Handler for every Spring Boot endpoint.
-* Route Handlers or Server Actions may be used only for clearly justified frontend-specific behavior.
-* Never store authentication tokens in `localStorage`.
+All frontend work must follow a consistent, reusable design system.
+
+### Design direction
+
+ScribeMedAI must look like a professional, calm, trustworthy medical SaaS product.
+
+The interface must not resemble:
+
+* generic AI-generated UI;
+* a Tailwind starter template;
+* a landing page;
+* a collection of unrelated cards;
+* an overly decorative startup dashboard.
+
+Prefer:
+
+* strong visual hierarchy;
+* restrained styling;
+* deliberate spacing;
+* consistent alignment;
+* subtle borders;
+* minimal shadows;
+* accessible interaction states;
+* responsive layouts;
+* reusable components.
+
+### Brand color
+
+Blue is the primary product color.
+
+Use a professional medium or deep blue suitable for a medical SaaS product.
+
+Do not use neon blue, purple-blue gradients, or highly saturated colors.
+
+The primary color is used for:
+
+* login;
+* save;
+* continue;
+* submit;
+* primary navigation actions;
+* selected and active states.
+
+Do not use blue indiscriminately for every action.
+
+### Semantic colors
+
+Use colors according to meaning:
+
+* primary actions: blue;
+* successful and approved states: green;
+* warnings and review-required states: amber;
+* destructive actions: red;
+* neutral and secondary actions: slate or gray;
+* informational states: blue.
+
+Examples of destructive actions:
+
+* logout;
+* delete;
+* permanently remove;
+* revoke;
+* cancel an irreversible operation.
+
+Logout should be visibly destructive but should not dominate the primary workflow.
+
+### Design tokens
+
+Colors, spacing, radii, shadows, and typography should be defined through centralized semantic tokens.
+
+Prefer token names such as:
+
+```css
+--background
+--surface
+--surface-muted
+--foreground
+--muted-foreground
+--primary
+--primary-hover
+--primary-foreground
+--border
+--input
+--ring
+--success
+--warning
+--destructive
+--destructive-hover
+--destructive-foreground
+```
+
+Do not spread hardcoded color values across components.
+
+Do not create page-specific color classes.
+
+### Reusable components
+
+Shared UI elements must be implemented as reusable components.
+
+At minimum, keep reusable versions of:
+
+* `Button`
+* `Input`
+* `Textarea`
+* `Select`
+* `Checkbox`
+* `Label`
+* `FormField`
+* `Card`
+* `Alert`
+* `Badge`
+* `Spinner`
+
+The `Button` component should support semantic variants:
+
+* `primary`
+* `secondary`
+* `outline`
+* `ghost`
+* `success`
+* `warning`
+* `destructive`
+
+Do not repeat long button class lists in individual pages.
+
+Do not create classes such as:
+
+```css
+.login-button
+.dashboard-button
+.red-logout-button
+```
+
+Use semantic component variants instead.
+
+### Layout rules
+
+Use a consistent application shell and page structure.
+
+Pages should generally contain:
+
+1. navigation;
+2. page header;
+3. page description or context;
+4. primary action;
+5. main content;
+6. contextual secondary actions.
+
+Do not place every section inside a card.
+
+Cards should only be used when they provide meaningful grouping.
+
+Avoid:
+
+* excessive nested cards;
+* oversized empty areas;
+* inconsistent page padding;
+* oversized headings;
+* excessive border radius;
+* decorative gradients;
+* glassmorphism;
+* heavy shadows;
+* random icon usage;
+* full-width forms without a usability reason.
+
+### Forms
+
+All forms must use consistent labels, control heights, spacing, focus states, and validation messages.
+
+Do not use placeholders as replacements for labels.
+
+Form controls must support:
+
+* normal;
+* hover;
+* focus-visible;
+* disabled;
+* invalid;
+* loading where applicable.
+
+### Status presentation
+
+Use consistent semantic states:
+
+* draft: neutral;
+* processing: blue;
+* review required: amber;
+* approved: green;
+* failed: red;
+* archived: muted gray.
+
+Do not communicate status using color alone.
+
+### Accessibility
+
+All UI changes must preserve or improve:
+
+* keyboard navigation;
+* visible focus states;
+* sufficient contrast;
+* semantic markup;
+* accessible labels;
+* accessible errors;
+* touch target size;
+* responsive behavior.
+
+Never remove focus outlines without providing an accessible replacement.
+
+### Responsive behavior
+
+Every page must be designed for desktop, tablet, and mobile.
+
+Do not merely shrink desktop layouts.
+
+Navigation, forms, tables, cards, and page actions must adapt intentionally for smaller screens.
+
+### Implementation discipline
+
+Before creating a new visual pattern:
+
+1. inspect existing shared components;
+2. determine whether an existing component can be extended;
+3. reuse semantic tokens;
+4. avoid duplicated Tailwind class strings;
+5. avoid inline styles;
+6. avoid unnecessary dependencies.
+
+When changing global design tokens or shared components, inspect all affected pages for regressions.
+
 
 ### Authentication and authorization
 

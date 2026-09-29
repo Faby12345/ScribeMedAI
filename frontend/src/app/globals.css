@@ -1,26 +1,378 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f4f7fb;
+  --surface: #ffffff;
+  --surface-muted: #f7f9fc;
+  --surface-elevated: #ffffff;
+  --foreground: #101828;
+  --muted-foreground: #5f6b7a;
+  --primary: #1d5f9f;
+  --primary-hover: #174f85;
+  --primary-foreground: #ffffff;
+  --primary-soft: #e8f1fb;
+  --secondary: #eef3f8;
+  --secondary-hover: #e2eaf3;
+  --border: #d8e1ec;
+  --input: #c4cfdd;
+  --ring: #2f80c9;
+  --success: #177245;
+  --success-hover: #125c38;
+  --success-soft: #e8f6ee;
+  --warning: #a16207;
+  --warning-hover: #854d0e;
+  --warning-soft: #fff6df;
+  --destructive: #b42318;
+  --destructive-hover: #951b12;
+  --destructive-foreground: #ffffff;
+  --destructive-soft: #fff0ee;
+  --info: #1d5f9f;
+  --info-soft: #e8f1fb;
+  --radius-control: 0.5rem;
+  --radius-surface: 0.75rem;
+  --shadow-surface-value: 0 1px 2px rgb(16 24 40 / 4%);
+  --shadow-elevated-value: 0 16px 42px rgb(16 24 40 / 8%);
+  --container-page: 72rem;
+  --header-height: 4.5rem;
+  --sidebar-width: 16.5rem;
+  --control-height: 2.75rem;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-elevated: var(--surface-elevated);
   --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-secondary: var(--secondary);
+  --color-secondary-hover: var(--secondary-hover);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-success-hover: var(--success-hover);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-hover: var(--warning-hover);
+  --color-warning-soft: var(--warning-soft);
+  --color-destructive: var(--destructive);
+  --color-destructive-hover: var(--destructive-hover);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --shadow-surface: var(--shadow-surface-value);
+  --shadow-elevated: var(--shadow-elevated-value);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    color-scheme: light;
   }
 }
 
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background: var(--background);
+}
+
 body {
+  min-height: 100%;
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+@media (min-width: 1024px) {
+  html[data-sidebar-expanded="true"] [data-desktop-sidebar] {
+    width: 16rem;
+  }
+
+  html[data-sidebar-expanded="true"] [data-app-shell-content] {
+    padding-left: 16rem;
+  }
+
+  html[data-sidebar-expanded="false"] [data-desktop-sidebar] {
+    width: 4.5rem;
+  }
+
+  html[data-sidebar-expanded="false"] [data-app-shell-content] {
+    padding-left: 4.5rem;
+  }
+}
+
+::selection {
+  background: var(--primary-soft);
+  color: var(--foreground);
+}
+
+@layer components {
+  .page-container {
+    width: min(100%, var(--container-page));
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+
+  @media (min-width: 640px) {
+    .page-container {
+      padding-inline: 2rem;
+    }
+  }
+
+  .page-title {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+    font-weight: 650;
+    letter-spacing: 0;
+    color: var(--foreground);
+  }
+
+  .section-title {
+    font-size: 1rem;
+    line-height: 1.5rem;
+    font-weight: 650;
+    color: var(--foreground);
+  }
+
+  .body-text {
+    font-size: 0.9375rem;
+    line-height: 1.625rem;
+    color: var(--foreground);
+  }
+
+  .secondary-text {
+    font-size: 0.875rem;
+    line-height: 1.5rem;
+    color: var(--muted-foreground);
+  }
+
+  .caption-text {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    color: var(--muted-foreground);
+  }
+
+  .panel-overlay-enter {
+    animation: panel-overlay-enter 180ms ease-out both;
+  }
+
+  .panel-overlay-exit {
+    animation: panel-overlay-exit 160ms ease-in both;
+  }
+
+  .side-panel-enter {
+    animation: side-panel-enter 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .side-panel-exit {
+    animation: side-panel-exit 180ms cubic-bezier(0.7, 0, 0.84, 0) both;
+  }
+
+  .navigation-drawer::backdrop {
+    background: rgb(16 24 40 / 38%);
+    animation: navigation-backdrop-enter 220ms ease-out both;
+  }
+
+  .navigation-drawer-panel {
+    animation: navigation-drawer-enter 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .navigation-drawer[data-closing="true"]::backdrop {
+    animation: navigation-backdrop-exit 160ms ease-in both;
+  }
+
+  .navigation-drawer[data-closing="true"] .navigation-drawer-panel {
+    animation: navigation-drawer-exit 180ms cubic-bezier(0.7, 0, 0.84, 0) both;
+  }
+
+  .knowledge-answer-enter {
+    animation: knowledge-answer-enter 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .knowledge-thinking {
+    animation: knowledge-thinking-enter 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .knowledge-reading-source {
+    color: var(--muted-foreground);
+    animation: knowledge-reading-source 2.1s ease-in-out infinite;
+  }
+
+  .knowledge-reading-source:nth-child(2) {
+    animation-delay: 700ms;
+  }
+
+  .knowledge-reading-source:nth-child(3) {
+    animation-delay: 1400ms;
+  }
+
+  .knowledge-reading-line {
+    width: 72%;
+    transform-origin: left center;
+  }
+
+  .knowledge-reading-source:nth-child(2) .knowledge-reading-line {
+    width: 88%;
+  }
+
+  .knowledge-reading-source:nth-child(3) .knowledge-reading-line {
+    width: 61%;
+  }
+}
+
+@keyframes knowledge-answer-enter {
+  from {
+    opacity: 0;
+    filter: blur(0.25rem);
+    transform: translateY(0.5rem);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+@keyframes knowledge-thinking-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.375rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes knowledge-reading-source {
+  0%, 24%, 100% {
+    background: transparent;
+    opacity: 0.52;
+  }
+
+  10%, 17% {
+    background: var(--primary-soft);
+    opacity: 1;
+  }
+}
+
+@keyframes panel-overlay-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes side-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateX(1.5rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes panel-overlay-exit {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes side-panel-exit {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(1.5rem);
+  }
+}
+
+@keyframes navigation-backdrop-enter {
+  from {
+    background: rgb(16 24 40 / 0%);
+  }
+
+  to {
+    background: rgb(16 24 40 / 38%);
+  }
+}
+
+@keyframes navigation-backdrop-exit {
+  from {
+    background: rgb(16 24 40 / 38%);
+  }
+
+  to {
+    background: rgb(16 24 40 / 0%);
+  }
+}
+
+@keyframes navigation-drawer-enter {
+  from {
+    clip-path: inset(0 10% 0 0);
+    transform: translateX(-100%);
+  }
+
+  to {
+    clip-path: inset(0);
+    transform: translateX(0);
+  }
+}
+
+@keyframes navigation-drawer-exit {
+  from {
+    clip-path: inset(0);
+    transform: translateX(0);
+  }
+
+  to {
+    clip-path: inset(0 10% 0 0);
+    transform: translateX(-100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-overlay-enter,
+  .panel-overlay-exit,
+  .side-panel-enter,
+  .side-panel-exit,
+  .navigation-drawer::backdrop,
+  .navigation-drawer-panel,
+  .navigation-drawer[data-closing="true"]::backdrop,
+  .navigation-drawer[data-closing="true"] .navigation-drawer-panel {
+    animation: none;
+  }
+
+  .knowledge-answer-enter,
+  .knowledge-thinking,
+  .knowledge-reading-source {
+    animation: none;
+  }
 }

@@ -2,10 +2,13 @@ spring:
   application:
     name: scribemed-backend
 
+
+
   datasource:
     url: ${DATABASE_URL}
     username: ${DATABASE_USERNAME}
     password: ${DATABASE_PASSWORD}
+
 
   jpa:
     open-in-view: false
@@ -15,6 +18,11 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+
+  servlet:
+    multipart:
+      max-file-size: ${SCRIBEMED_AUDIO_MAX_FILE_SIZE:25MB}
+      max-request-size: ${SCRIBEMED_AUDIO_MAX_REQUEST_SIZE:25MB}
 
 management:
   endpoints:
@@ -28,10 +36,69 @@ management:
 
 logging:
   pattern:
-    console: '%d{yyyy-MM-dd''T''HH:mm:ss.SSSXXX} level=%5p app=${spring.application.name} requestId=%X{requestId:-none} thread=%t logger=%logger{36} message=%replace(%m){''[\r\n]+'','' ''}%n%wEx'
+    console: "%clr(%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX}){faint} %clr(level=%5p) %clr(app=${spring.application.name}){cyan} %clr(requestId=%X{requestId:-none}){magenta} %clr(thread=%t){faint} %clr(logger=%logger{36}){blue} message=%replace(%m){'[\r\n]+',' '}%n%wEx"
   level:
     root: INFO
     ro.scribemed.backend: INFO
     org.springframework.security: INFO
     org.hibernate.SQL: WARN
     org.hibernate.orm.jdbc.bind: WARN
+
+scribemed:
+  pdf:
+    local-storage-dir: ${SCRIBEMED_PDF_STORAGE_DIR:./var/pdf}
+
+  embedding:
+    base-url: ${EMBEDDING_SERVICE_URL:http://localhost:8000}
+    expected-dimensions: 384
+
+  medications:
+    import:
+      enabled: ${SCRIBEMED_MEDICATION_IMPORT_ENABLED:false}
+      source: ${SCRIBEMED_MEDICATION_IMPORT_SOURCE:excel}
+      file-path: ${SCRIBEMED_MEDICATION_IMPORT_FILE_PATH:/Users/turlefabian/Downloads/nomenclator.xlsx}
+  session:
+    cookie:
+      secure: ${SCRIBEMED_SESSION_COOKIE_SECURE:true}
+      same-site: ${SCRIBEMED_SESSION_COOKIE_SAME_SITE:Lax}
+
+  dev:
+    seed:
+      enabled: ${SCRIBEMED_DEV_SEED_ENABLED:false}
+      tenant-name: ${SCRIBEMED_DEV_TENANT_NAME:Demo Clinic}
+      doctor-email: ${SCRIBEMED_DEV_DOCTOR_EMAIL:}
+      doctor-password: ${SCRIBEMED_DEV_DOCTOR_PASSWORD:}
+      doctor-display-name: ${SCRIBEMED_DEV_DOCTOR_DISPLAY_NAME:Dr. Demo}
+
+  audio:
+    storage:
+      backend: ${SCRIBEMED_AUDIO_STORAGE_BACKEND:local}
+    local-storage-dir: ${SCRIBEMED_AUDIO_LOCAL_STORAGE_DIR:./var/audio}
+    max-size-bytes: ${SCRIBEMED_AUDIO_MAX_SIZE_BYTES:26214400}
+    s3:
+      bucket: ${SCRIBEMED_AUDIO_S3_BUCKET:}
+      region: ${AWS_REGION:${AWS_DEFAULT_REGION:}}
+      endpoint-override: ${SCRIBEMED_AUDIO_S3_ENDPOINT_OVERRIDE:}
+      path-style-access-enabled: ${SCRIBEMED_AUDIO_S3_PATH_STYLE_ACCESS_ENABLED:false}
+
+  processing:
+    worker:
+      enabled: ${SCRIBEMED_PROCESSING_WORKER_ENABLED:true}
+      poll-delay-ms: ${SCRIBEMED_PROCESSING_WORKER_POLL_DELAY_MS:5000}
+
+  transcription:
+    provider: deepgram
+    deepgram:
+      api-key: ${DEEPGRAM_API_KEY:}
+      base-url: ${DEEPGRAM_BASE_URL:https://api.deepgram.com}
+      model: ${DEEPGRAM_MODEL:nova-3}
+      language: ${DEEPGRAM_LANGUAGE:ro}
+      smart-format: ${DEEPGRAM_SMART_FORMAT:true}
+
+  llm:
+    provider: huggingface
+
+    huggingface:
+      api-key: ${HF_TOKEN:}
+      base-url: ${HUGGINGFACE_BASE_URL:https://router.huggingface.co/v1}
+      knowledge-model: ${HUGGINGFACE_KNOWLEDGE_MODEL:Qwen/Qwen3-32B:cheapest}

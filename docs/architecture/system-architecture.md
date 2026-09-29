@@ -41,6 +41,7 @@ Toate funcționalitățile se află inițial în aceeași aplicație și în ace
 - procesare AI;
 - documente;
 - șabloane;
+- bază de cunoștințe;
 - audit;
 - feedback.
 
@@ -867,6 +868,52 @@ updated_at TIMESTAMP
 tenant_id = NULL poate reprezenta un șablon global.
 
 ```text
+knowledge_document
+```
+
+```text
+id UUID PK
+tenant_id UUID FK
+title VARCHAR
+source_institution VARCHAR
+source_url TEXT NULL
+published_at DATE NULL
+version VARCHAR NULL
+status VARCHAR
+original_filename VARCHAR
+checksum VARCHAR
+object_key VARCHAR
+created_at TIMESTAMP
+```
+
+Documentele din baza de cunoștințe sunt deținute de tenant. Același document
+poate exista în tenanturi diferite, dar checksum-ul este unic în cadrul unui
+tenant. Documentele globale necesită un model explicit separat și nu sunt
+reprezentate prin `tenant_id = NULL`.
+
+```text
+knowledge_chunk
+```
+
+```text
+id UUID PK
+tenant_id UUID FK
+document_id UUID FK
+chunk_index INTEGER
+content TEXT
+page_from INTEGER NULL
+page_to INTEGER NULL
+section_title VARCHAR NULL
+embedding VECTOR(384)
+created_at TIMESTAMP
+```
+
+Tenantul chunkului trebuie să fie același cu tenantul documentului. Căutarea
+semantică filtrează obligatoriu după tenant și include numai documente active.
+Vectorii sunt păstrați în PostgreSQL prin extensia pgvector; nu se introduce o
+bază de date vectorială separată.
+
+```text
 clinical_document
 ```
 
@@ -1673,7 +1720,8 @@ Iterația 8 – Pregătirea pilotului
 - audit;
 - abstracție pentru furnizorii AI;
 - ștergere automată audio;
-- tenant_id peste tot.
+- tenant_id peste tot;
+- documente de cunoștințe și căutare semantică izolate pe tenant în PostgreSQL;
 
 **Nu se implementează acum**
 
@@ -1682,7 +1730,6 @@ Iterația 8 – Pregătirea pilotului
 - RabbitMQ administrat;
 - aplicație mobilă nativă;
 - integrare SIUI;
-- căutare semantică;
 - vector database;
 - diagnostic automat;
 - recomandări clinice;
