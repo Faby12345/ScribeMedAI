@@ -707,6 +707,8 @@ Tenant / Clinic
 ├── AudioAsset
 ├── ProcessingJob
 ├── Transcript
+├── ConsultationNotes
+│        └── PrescribedMedication
 ├── ClinicalDocument
 │        └── DocumentVersion
 │                 └── ReviewFlag
@@ -791,6 +793,55 @@ version BIGINT
 ```
 
 version este utilizat pentru optimistic locking.
+
+```text
+consultation_notes
+```
+
+```text
+id UUID PK
+tenant_id UUID FK
+consultation_id UUID FK
+created_by_user_id UUID FK
+reason TEXT NULL
+history TEXT NULL
+objective TEXT NULL
+assessment TEXT NULL
+plan TEXT NULL
+created_at TIMESTAMP
+```
+
+```text
+prescribed_medication
+```
+
+```text
+id UUID PK
+tenant_id UUID FK
+consultation_notes_id UUID FK
+position INTEGER
+catalog_cim_code VARCHAR
+commercial_name_snapshot VARCHAR NULL
+active_substance_snapshot VARCHAR NULL
+pharmaceutical_form_snapshot VARCHAR NULL
+concentration_snapshot VARCHAR NULL
+prescription_type_snapshot VARCHAR NULL
+dose VARCHAR
+administration_route VARCHAR
+frequency VARCHAR
+duration VARCHAR
+quantity VARCHAR NULL
+instructions TEXT NULL
+notes TEXT NULL
+created_at TIMESTAMP
+```
+
+Planul medicamentos introdus manual se salvează în aceeași tranzacție cu
+notițele consultației. Backendul reîncarcă medicamentul din nomenclator după
+codul CIM, respinge intrările inexistente, suspendate sau duplicate și salvează
+un snapshot al atributelor de catalog. Poziția este atribuită de backend după
+ordinea din cerere. Datele planului medicamentos nu sunt trimise furnizorului
+AI pentru rescriere sau recomandare.
 
 ```text
 consent_record
@@ -1121,6 +1172,8 @@ POST /api/v1/consultations
 GET /api/v1/consultations/{consultationId}
 GET /api/v1/consultations/recent
 POST /api/v1/consultations/{consultationId}/consent-confirmations
+POST /api/v1/consultations/{consultationId}/notes
+GET /api/v1/medications/query?query=
 ```
 
 **Audio**

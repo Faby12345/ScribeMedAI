@@ -121,7 +121,7 @@ export function DocumentReviewPage({
     reviewDocument?.draft ?? emptyDraft,
   );
   const [transcript, setTranscript] = useState(
-    reviewDocument?.transcript.transcriptText ?? "",
+    reviewDocument?.transcript?.transcriptText ?? "",
   );
   const [reviewFlags, setReviewFlags] = useState<ReviewFlag[]>(
     () => reviewDocument?.reviewFlags.map(toReviewFlag) ?? [],
@@ -263,7 +263,7 @@ export function DocumentReviewPage({
 
       setCurrentDocument(savedDocument);
       setDraft(savedDocument.draft);
-      setTranscript(savedDocument.transcript.transcriptText);
+      setTranscript(savedDocument.transcript?.transcriptText ?? "");
       setReviewFlags(savedDocument.reviewFlags.map(toReviewFlag));
       setResolvedFlags({});
       setSaveState("saved");

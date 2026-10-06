@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 import ro.scribemed.backend.audit.application.AuditService;
 import ro.scribemed.backend.consultation.domain.Consultation;
+import ro.scribemed.backend.consultation.domain.ConsultationNotes;
 import ro.scribemed.backend.document.domain.ClinicalDocument;
 import ro.scribemed.backend.document.domain.ClinicalDocumentStatus;
 import ro.scribemed.backend.document.domain.DocumentVersion;
@@ -35,6 +36,8 @@ import ro.scribemed.backend.identity.domain.UserRole;
 import ro.scribemed.backend.identity.domain.UserStatus;
 import ro.scribemed.backend.identity.infrastructure.AppUserRepository;
 import ro.scribemed.backend.patient.domain.Patient;
+import ro.scribemed.backend.prescribedMedication.domain.PrescribedMedication;
+import ro.scribemed.backend.prescribedMedication.infrastructure.PrescribedMedicationRepository;
 import ro.scribemed.backend.tenancy.domain.Tenant;
 import ro.scribemed.backend.tenancy.domain.TenantStatus;
 import ro.scribemed.backend.transcription.domain.ConsultationTranscript;
@@ -46,12 +49,15 @@ class DocumentReviewServiceTests {
     private final DocumentVersionRepository documentVersionRepository = mock(DocumentVersionRepository.class);
     private final ConsultationTranscriptRepository transcriptRepository = mock(ConsultationTranscriptRepository.class);
     private final AppUserRepository appUserRepository = mock(AppUserRepository.class);
+    private final PrescribedMedicationRepository prescribedMedicationRepository =
+            mock(PrescribedMedicationRepository.class);
     private final AuditService auditService = mock(AuditService.class);
     private final DocumentReviewService documentReviewService = new DocumentReviewService(
             clinicalDocumentRepository,
             documentVersionRepository,
             transcriptRepository,
             appUserRepository,
+            prescribedMedicationRepository,
             auditService,
             new ObjectMapper()
     );
@@ -139,6 +145,75 @@ class DocumentReviewServiceTests {
         assertThat(response.documentStatus()).isEqualTo(ClinicalDocumentStatus.APPROVED);
         assertThat(response.versionStatus()).isEqualTo(DocumentVersionStatus.APPROVED);
         assertThat(response.draft().subjective()).isEqualTo("Subiectiv");
+    }
+
+    @Test
+    void getConsultationReviewDocumentReturnsMedicationPlanWithoutTranscript() {
+        UUID tenantId = UUID.randomUUID();
+        UUID consultationId = UUID.randomUUID();
+        UUID notesId = UUID.randomUUID();
+        TestDocumentData data = createDocumentData(tenantId, consultationId);
+        ConsultationNotes sourceNotes = ConsultationNotes.create(
+                data.tenant(),
+                data.document().getConsultation(),
+                data.doctor(),
+                "Motiv",
+                "Istoric",
+                "Obiectiv",
+                "Evaluare",
+                "Plan"
+        );
+        ReflectionTestUtils.setField(sourceNotes, "id", notesId);
+        ReflectionTestUtils.setField(data.version(), "sourceNotes", sourceNotes);
+        PrescribedMedication medication = new PrescribedMedication(
+                data.tenant(),
+                sourceNotes,
+                0,
+                "CIM-1",
+                "Paracetamol",
+                "Paracetamolum",
+                "COMPRIMAT",
+                "500 mg",
+                "PRF",
+                "500 mg",
+                "ORAL",
+                "De două ori pe zi",
+                "7 zile",
+                "14 comprimate",
+                "După masă",
+                null
+        );
+        UUID medicationId = UUID.randomUUID();
+        ReflectionTestUtils.setField(medication, "id", medicationId);
+
+        when(clinicalDocumentRepository.findByConsultation_IdAndTenant_IdAndDocumentType(
+                consultationId,
+                tenantId,
+                "SOAP_NOTE"
+        )).thenReturn(Optional.of(data.document()));
+        when(documentVersionRepository.findFirstByDocument_IdAndTenant_IdAndStatusOrderByVersionNumberDesc(
+                data.document().getId(),
+                tenantId,
+                DocumentVersionStatus.DRAFT
+        )).thenReturn(Optional.of(data.version()));
+        when(transcriptRepository.findByConsultation_IdAndTenant_Id(consultationId, tenantId))
+                .thenReturn(Optional.empty());
+        when(prescribedMedicationRepository.findByConsultationNotes_IdAndTenant_IdOrderByPositionAsc(
+                notesId,
+                tenantId
+        )).thenReturn(List.of(medication));
+
+        DocumentReviewResponse response = documentReviewService.getConsultationReviewDocument(
+                consultationId,
+                tenantId
+        );
+
+        assertThat(response.transcript()).isNull();
+        assertThat(response.medications()).hasSize(1);
+        assertThat(response.medications().getFirst().id()).isEqualTo(medicationId);
+        assertThat(response.medications().getFirst().cimCode()).isEqualTo("CIM-1");
+        assertThat(response.medications().getFirst().commercialName()).isEqualTo("Paracetamol");
+        assertThat(response.medications().getFirst().dose()).isEqualTo("500 mg");
     }
 
     @Test

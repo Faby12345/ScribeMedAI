@@ -122,7 +122,7 @@ public class ConsultationController {
     ResponseEntity<NotesResponse> processNotes(
             @AuthenticationPrincipal CurrentUser currentUser,
             @PathVariable UUID consultationId,
-            @RequestBody NotesRequest notesRequest
+            @Valid @RequestBody NotesRequest notesRequest
     ) {
         NotesResponse response =  consultationService.processNotes(
                 notesRequest,

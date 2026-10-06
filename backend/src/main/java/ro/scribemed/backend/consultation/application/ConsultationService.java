@@ -47,6 +47,7 @@ import ro.scribemed.backend.processing.domain.ProcessingJob;
 import ro.scribemed.backend.processing.domain.ProcessingJobStatus;
 import ro.scribemed.backend.processing.domain.ProcessingJobType;
 import ro.scribemed.backend.processing.infrastructure.ProcessingJobRepository;
+import ro.scribemed.backend.prescribedMedication.application.PrescribedMedicationService;
 import ro.scribemed.backend.tenancy.domain.Tenant;
 import ro.scribemed.backend.tenancy.infrastructure.TenantRepository;
 import ro.scribemed.backend.transcription.infrastructure.ConsultationTranscriptRepository;
@@ -79,6 +80,7 @@ public class ConsultationService {
     private final AuditService auditService;
     private final long maxAudioSizeBytes;
     private final ConsultationNotesRepository consultationNotesRepository;
+    private final PrescribedMedicationService prescribedMedicationService;
 
     public ConsultationService(
             ConsultationRepository consultationRepository,
@@ -91,7 +93,8 @@ public class ConsultationService {
             AudioStorageService audioStorageService,
             AuditService auditService,
             @Value("${scribemed.audio.max-size-bytes}") long maxAudioSizeBytes,
-            ConsultationNotesRepository consultationNotesRepository
+            ConsultationNotesRepository consultationNotesRepository,
+            PrescribedMedicationService prescribedMedicationService
     ) {
         this.consultationRepository = consultationRepository;
         this.patientRepository = patientRepository;
@@ -104,6 +107,7 @@ public class ConsultationService {
         this.auditService = auditService;
         this.maxAudioSizeBytes = maxAudioSizeBytes;
         this.consultationNotesRepository = consultationNotesRepository;
+        this.prescribedMedicationService = prescribedMedicationService;
     }
 
     @Transactional
@@ -289,6 +293,12 @@ public class ConsultationService {
         );
 
         ConsultationNotes savedNotes = consultationNotesRepository.save(notes);
+
+        prescribedMedicationService.createPlan(
+                tenant,
+                savedNotes,
+                request.medications()
+        );
 
         ProcessingJob savedJob =  processingJobRepository.save(new ProcessingJob(
                 tenant,

@@ -29,6 +29,7 @@ import ro.scribemed.backend.audio.domain.ConsultationAudio;
 import ro.scribemed.backend.audio.infrastructure.ConsultationAudioRepository;
 import ro.scribemed.backend.audit.application.AuditService;
 import ro.scribemed.backend.consultation.domain.Consultation;
+import ro.scribemed.backend.consultation.domain.ConsultationNotes;
 import ro.scribemed.backend.consultation.domain.ConsultationStatus;
 import ro.scribemed.backend.consultation.application.exception.AudioFileTooLargeException;
 import ro.scribemed.backend.consultation.application.exception.ConsultationNotFoundException;
@@ -38,6 +39,8 @@ import ro.scribemed.backend.consultation.application.exception.UnsupportedAudioT
 import ro.scribemed.backend.consultation.dto.AudioUploadResponse;
 import ro.scribemed.backend.consultation.dto.ConsultationResponse;
 import ro.scribemed.backend.consultation.dto.CreateConsultationRequest;
+import ro.scribemed.backend.consultation.dto.NotesRequest;
+import ro.scribemed.backend.consultation.dto.NotesResponse;
 import ro.scribemed.backend.consultation.infrastructure.ConsultationNotesRepository;
 import ro.scribemed.backend.consultation.infrastructure.ConsultationRepository;
 import ro.scribemed.backend.consultation.infrastructure.HuggingFaceClinicalNoteGenerationProvider;
@@ -48,8 +51,11 @@ import ro.scribemed.backend.identity.infrastructure.AppUserRepository;
 import ro.scribemed.backend.patient.domain.Patient;
 import ro.scribemed.backend.patient.infrastructure.PatientRepository;
 import ro.scribemed.backend.processing.domain.ProcessingJob;
+import ro.scribemed.backend.processing.domain.ProcessingJobStatus;
 import ro.scribemed.backend.processing.domain.ProcessingJobType;
 import ro.scribemed.backend.processing.infrastructure.ProcessingJobRepository;
+import ro.scribemed.backend.prescribedMedication.application.PrescribedMedicationService;
+import ro.scribemed.backend.prescribedMedication.dto.PrescribedMedicationRequest;
 import ro.scribemed.backend.tenancy.domain.Tenant;
 import ro.scribemed.backend.tenancy.domain.TenantStatus;
 import ro.scribemed.backend.tenancy.infrastructure.TenantRepository;
@@ -67,6 +73,7 @@ class ConsultationServiceTests {
     private final AudioStorageService audioStorageService = mock(AudioStorageService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final ConsultationNotesRepository consultationNotesRepository = mock(ConsultationNotesRepository.class);
+    private final PrescribedMedicationService prescribedMedicationService = mock(PrescribedMedicationService.class);
 
     private final ConsultationService consultationService = new ConsultationService(
             consultationRepository,
@@ -79,7 +86,8 @@ class ConsultationServiceTests {
             audioStorageService,
             auditService,
             25_000_000,
-            consultationNotesRepository
+            consultationNotesRepository,
+            prescribedMedicationService
     );
 
     @Test
@@ -329,7 +337,8 @@ class ConsultationServiceTests {
                 audioStorageService,
                 auditService,
                 3,
-                consultationNotesRepository
+                consultationNotesRepository,
+                prescribedMedicationService
         );
         when(consultationRepository.findByIdAndTenant_Id(consultationId, tenantId))
                 .thenReturn(Optional.of(consultation));
@@ -373,5 +382,66 @@ class ConsultationServiceTests {
         assertThat(result.getTotalElements()).isEqualTo(1);
         verify(consultationRepository).findResponsesByTenantId(tenantId, pageable);
         verify(consultationRepository, never()).findAll();
+    }
+
+    @Test
+    void processNotesCreatesMedicationPlanBeforeQueuingDocumentGeneration() {
+        UUID tenantId = UUID.randomUUID();
+        UUID actorUserId = UUID.randomUUID();
+        UUID consultationId = UUID.randomUUID();
+        Tenant tenant = new Tenant("Demo Clinic", TenantStatus.ACTIVE);
+        AppUser doctor = new AppUser(
+                tenant,
+                "doctor@example.com",
+                "hash",
+                "Dr. Demo",
+                UserRole.DOCTOR,
+                UserStatus.ACTIVE
+        );
+        Patient patient = new Patient(tenant, "Ana", "Ionescu", null, null, null, null);
+        Consultation consultation = new Consultation(tenant, patient, doctor);
+        PrescribedMedicationRequest medication = new PrescribedMedicationRequest(
+                "CIM-1",
+                "500 mg",
+                "ORAL",
+                "De două ori pe zi",
+                "7 zile",
+                "14 comprimate",
+                "După masă",
+                null
+        );
+        NotesRequest request = new NotesRequest(
+                "Motiv",
+                "Evaluare",
+                "Istoric",
+                "Obiectiv",
+                "Plan",
+                List.of(medication)
+        );
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
+        when(appUserRepository.findByIdAndTenant_Id(actorUserId, tenantId)).thenReturn(Optional.of(doctor));
+        when(consultationRepository.findByIdAndTenant_Id(consultationId, tenantId))
+                .thenReturn(Optional.of(consultation));
+        when(consultationNotesRepository.save(any(ConsultationNotes.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(processingJobRepository.save(any(ProcessingJob.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        NotesResponse response = consultationService.processNotes(
+                request,
+                tenantId,
+                actorUserId,
+                consultationId
+        );
+
+        ArgumentCaptor<ConsultationNotes> notesCaptor = ArgumentCaptor.forClass(ConsultationNotes.class);
+        verify(consultationNotesRepository).save(notesCaptor.capture());
+        verify(prescribedMedicationService).createPlan(
+                tenant,
+                notesCaptor.getValue(),
+                request.medications()
+        );
+        verify(processingJobRepository).save(any(ProcessingJob.class));
+        assertThat(response.status()).isEqualTo(ProcessingJobStatus.PENDING);
     }
 }
