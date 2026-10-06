@@ -20,3 +20,14 @@ export type MedicationResponse = {
     hasAdditionalInformation: boolean;
     sourceUpdatedAt: string | null; // ISO date: YYYY-MM-DD
 };
+
+export type PrescribedMedicationDraft = {
+    medication: MedicationResponse;
+    dose: string;
+    administrationRoute: string;
+    frequency: string;
+    duration: string;
+    quantity: string;
+    instructions: string;
+    notes: string;
+};

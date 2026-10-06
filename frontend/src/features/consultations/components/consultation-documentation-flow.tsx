@@ -12,11 +12,14 @@ import {
   ConfirmPatientInformedApiError,
 } from "@/features/consultations/api/confirm-patient-informed";
 import { sendAudio, SendAudioApiError } from "@/features/consultations/api/send-audio";
-import {sendNotes, SendNotesApiError} from "@/features/consultations/api/send-notes";
+import { sendNotes, SendNotesApiError } from "@/features/consultations/api/send-notes";
+import { MedicationPlanEditor } from "@/features/medication/components/medication-plan-editor";
+import type { PrescribedMedicationDraft } from "@/features/medication/types";
 
 type DocumentationSource = "audio" | "notes";
 type FlowStep = "source" | "capture";
 type AudioMode = "record" | "upload";
+type ClinicalNoteTextField = "reason" | "history" | "objective" | "assessment" | "plan";
 
 export type ClinicalNotes = {
   reason: string;
@@ -24,6 +27,7 @@ export type ClinicalNotes = {
   objective: string;
   assessment: string;
   plan: string;
+  medications: PrescribedMedicationDraft[];
 };
 
 type ConsultationDocumentationFlowProps = {
@@ -37,6 +41,7 @@ const emptyNotes: ClinicalNotes = {
   objective: "",
   assessment: "",
   plan: "",
+  medications: [],
 };
 
 const testClinicalNotes: ClinicalNotes = {
@@ -48,6 +53,7 @@ const testClinicalNotes: ClinicalNotes = {
   assessment:
     "Tablou clinic sugestiv pentru infecție acută de căi respiratorii superioare, formă ușoară, fără semne de alarmă la evaluarea curentă.",
   plan: "Tratament simptomatic, hidratare, repaus relativ și reevaluare dacă apare febră persistentă, dispnee, agravarea tusei sau stare generală alterată.",
+  medications: [],
 };
 
 const showTestNotesPrefill = process.env.NODE_ENV !== "production";
@@ -75,8 +81,23 @@ export function ConsultationDocumentationFlow({
   const audioChunksRef = useRef<Blob[]>([]);
 
   const hasNotes = useMemo(
-    () => Object.values(notes).some((value) => value.trim().length > 0),
+    () =>
+      [notes.reason, notes.history, notes.objective, notes.assessment, notes.plan].some(
+        (value) => value.trim().length > 0,
+      ) || notes.medications.length > 0,
     [notes],
+  );
+
+  const hasCompleteMedicationPlan = useMemo(
+    () =>
+      notes.medications.every(
+        (item) =>
+          item.dose.trim().length > 0 &&
+          item.administrationRoute.trim().length > 0 &&
+          item.frequency.trim().length > 0 &&
+          item.duration.trim().length > 0,
+      ),
+    [notes.medications],
   );
 
   const canContinue = source === "notes" || patientInformed;
@@ -85,7 +106,7 @@ export function ConsultationDocumentationFlow({
       ? audioMode === "record"
         ? recordingState === "recorded" && Boolean(recordedAudioBlob)
         : Boolean(selectedAudioFile)
-      : hasNotes;
+      : hasNotes && hasCompleteMedicationPlan;
 
   useEffect(() => {
     if (recordingState !== "recording") {
@@ -179,7 +200,7 @@ export function ConsultationDocumentationFlow({
     setRecordingError(null);
   }
 
-  function updateNote(field: keyof ClinicalNotes, value: string) {
+  function updateNote(field: ClinicalNoteTextField, value: string) {
     setNotes((current) => ({
       ...current,
       [field]: value,
@@ -309,6 +330,9 @@ export function ConsultationDocumentationFlow({
               setRecordingState("idle");
             }}
             onNoteChange={updateNote}
+            onMedicationsChange={(medications) =>
+              setNotes((current) => ({ ...current, medications }))
+            }
             onResetAudio={resetAudio}
             onStartRecording={startRecording}
             onStopRecording={stopRecording}
@@ -486,6 +510,7 @@ function CaptureStep({
   onBack,
   onFileSelected,
   onNoteChange,
+  onMedicationsChange,
   onResetAudio,
   onStartRecording,
   onStopRecording,
@@ -505,7 +530,8 @@ function CaptureStep({
   onAudioModeChange: (mode: AudioMode) => void;
   onBack: () => void;
   onFileSelected: (file: File) => void;
-  onNoteChange: (field: keyof ClinicalNotes, value: string) => void;
+  onNoteChange: (field: ClinicalNoteTextField, value: string) => void;
+  onMedicationsChange: (medications: PrescribedMedicationDraft[]) => void;
   onResetAudio: () => void;
   onStartRecording: () => void;
   onStopRecording: () => void;
@@ -532,6 +558,7 @@ function CaptureStep({
         <NotesCapture
           notes={notes}
           onChange={onNoteChange}
+          onMedicationsChange={onMedicationsChange}
           onPrefillTestNotes={onPrefillTestNotes}
         />
       )}
@@ -693,10 +720,12 @@ function AudioCapture({
 function NotesCapture({
   notes,
   onChange,
+  onMedicationsChange,
   onPrefillTestNotes,
 }: {
   notes: ClinicalNotes;
-  onChange: (field: keyof ClinicalNotes, value: string) => void;
+  onChange: (field: ClinicalNoteTextField, value: string) => void;
+  onMedicationsChange: (medications: PrescribedMedicationDraft[]) => void;
   onPrefillTestNotes: () => void;
 }) {
   return (
@@ -750,6 +779,10 @@ function NotesCapture({
         label="Plan"
         value={notes.plan}
         onChange={(value) => onChange("plan", value)}
+      />
+      <MedicationPlanEditor
+        value={notes.medications}
+        onChange={onMedicationsChange}
       />
     </div>
   );
