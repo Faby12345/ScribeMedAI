@@ -31,6 +31,13 @@ export function MedicationPlanEditor({
   const [searchError, setSearchError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const hasIncompleteMedication = value.some(
+    (item) =>
+      !item.dose.trim() ||
+      !item.administrationRoute.trim() ||
+      !item.frequency.trim() ||
+      !item.duration.trim(),
+  );
 
   useEffect(() => {
     if (!isSearchOpen) {
@@ -125,7 +132,7 @@ export function MedicationPlanEditor({
 
   return (
     <>
-      <section aria-labelledby="medication-plan-title" className="mt-2 border-t border-border/70 pt-6">
+      <section aria-labelledby="medication-plan-title" className="mt-3 border-t border-border pt-7">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h3 id="medication-plan-title" className="text-base font-semibold text-foreground">
@@ -143,11 +150,11 @@ export function MedicationPlanEditor({
         </div>
 
         {value.length === 0 ? (
-          <div className="mt-4 rounded-[var(--radius-control)] border border-dashed border-border bg-surface-muted px-4 py-5 text-sm text-muted-foreground">
+          <div className="mt-4 border-y border-dashed border-border py-5 text-sm text-muted-foreground">
             Nu ai adăugat încă niciun medicament. Folosește acțiunea rapidă din dreapta ecranului.
           </div>
         ) : (
-          <ol className="mt-4 grid gap-4">
+          <ol className="mt-4 border-b border-border">
             {value.map((item, index) => (
               <MedicationPlanItem
                 key={item.medication.cimCode}
@@ -168,9 +175,14 @@ export function MedicationPlanEditor({
             ))}
           </ol>
         )}
+        {hasIncompleteMedication ? (
+          <Alert variant="warning" title="Schema de tratament este incompletă" className="mt-4">
+            Completează doza, calea de administrare, frecvența și durata pentru fiecare medicament.
+          </Alert>
+        ) : null}
       </section>
 
-      <div className="fixed bottom-5 right-4 z-40 flex flex-col items-end gap-3 sm:bottom-7 sm:right-7">
+      <div className="fixed bottom-28 right-4 z-40 flex flex-col items-end gap-3 sm:bottom-24 sm:right-7">
         {isSearchOpen ? (
           <MedicationSearchPanel
             query={query}
@@ -350,14 +362,11 @@ function MedicationPlanItem({
   const prefix = `medication-${item.medication.cimCode}`;
 
   return (
-    <li className="rounded-xl border border-border bg-surface p-4 sm:p-5">
+    <li className="border-t border-border py-5">
       <div className="flex min-w-0 flex-col gap-3 border-b border-border/70 pb-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Medicament {index + 1}
-          </p>
-          <h4 className="mt-1 font-semibold text-foreground">
-            {item.medication.commercialName ?? "Denumire indisponibilă"}
+          <h4 className="font-semibold text-foreground">
+            {index + 1}. {item.medication.commercialName ?? "Denumire indisponibilă"}
           </h4>
           <p className="mt-1 text-sm text-muted-foreground">
             {formatMedicationDetails(item.medication)} · CIM {item.medication.cimCode}

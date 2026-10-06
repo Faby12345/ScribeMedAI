@@ -10,6 +10,8 @@ import {
 import { DocumentReviewPage } from "@/features/documents/components/document-review-page";
 import type { DocumentReviewDocument } from "@/features/documents/types";
 import { getCurrentUser } from "@/features/auth/api/current-user";
+import { getConsultation } from "@/features/consultations/api/get-consultation";
+import { getPatientById } from "@/features/patients/api/get-patient-server";
 
 type ConsultationReviewPageProps = {
   params: Promise<{
@@ -71,9 +73,24 @@ export default async function ConsultationReviewPage({
     throw error;
   }
 
+  const consultation = await getConsultation(
+    consultationId,
+    requestCookies,
+  ).catch(() => null);
+  const patient = consultation
+    ? await getPatientById(consultation.patientId, requestCookies).catch(
+        () => null,
+      )
+    : null;
+  const patientName = patient
+    ? `${patient.lastName} ${patient.firstName}`.trim()
+    : null;
+
   return (
     <DocumentReviewPage
       consultationId={consultationId}
+      patientBirthDate={patient?.birthDate ?? null}
+      patientName={patientName}
       reviewDocument={reviewDocument}
     />
   );

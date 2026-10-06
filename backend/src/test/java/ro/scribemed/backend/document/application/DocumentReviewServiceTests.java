@@ -20,6 +20,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import ro.scribemed.backend.audit.application.AuditService;
 import ro.scribemed.backend.consultation.domain.Consultation;
 import ro.scribemed.backend.consultation.domain.ConsultationNotes;
+import ro.scribemed.backend.consultation.domain.ConsultationStatus;
 import ro.scribemed.backend.document.domain.ClinicalDocument;
 import ro.scribemed.backend.document.domain.ClinicalDocumentStatus;
 import ro.scribemed.backend.document.domain.DocumentVersion;
@@ -306,6 +307,7 @@ class DocumentReviewServiceTests {
         assertThat(response.approvedAt()).isNotNull();
         assertThat(data.document().getStatus()).isEqualTo(ClinicalDocumentStatus.APPROVED);
         assertThat(data.version().getStatus()).isEqualTo(DocumentVersionStatus.APPROVED);
+        assertThat(data.document().getConsultation().getStatus()).isEqualTo(ConsultationStatus.APPROVED);
         verify(auditService).record(
                 data.tenant(),
                 data.doctor(),

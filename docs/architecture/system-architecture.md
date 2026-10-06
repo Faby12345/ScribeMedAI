@@ -840,8 +840,10 @@ Planul medicamentos introdus manual se salvează în aceeași tranzacție cu
 notițele consultației. Backendul reîncarcă medicamentul din nomenclator după
 codul CIM, respinge intrările inexistente, suspendate sau duplicate și salvează
 un snapshot al atributelor de catalog. Poziția este atribuită de backend după
-ordinea din cerere. Datele planului medicamentos nu sunt trimise furnizorului
-AI pentru rescriere sau recomandare.
+ordinea din cerere. Notițele introduse manual și datele planului medicamentos
+nu sunt trimise furnizorului AI. Ele creează direct un document clinic editabil
+cu o versiune `DRAFT` având sursa `DOCTOR_CREATED`. Pipeline-ul AI rămâne
+disponibil doar pentru consultațiile documentate prin audio.
 
 ```text
 consent_record
@@ -1006,6 +1008,7 @@ source:
 
 ```text
 AI_GENERATED
+DOCTOR_CREATED
 DOCTOR_EDITED
 REGENERATED
 CORRECTION

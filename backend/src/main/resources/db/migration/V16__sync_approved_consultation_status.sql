@@ -1,0 +1,9 @@
+UPDATE consultation AS c
+SET status = 'APPROVED',
+    updated_at = GREATEST(c.updated_at, d.approved_at)
+FROM clinical_document AS d
+WHERE d.consultation_id = c.id
+  AND d.tenant_id = c.tenant_id
+  AND d.document_type = 'SOAP_NOTE'
+  AND d.status = 'APPROVED'
+  AND c.status <> 'APPROVED';

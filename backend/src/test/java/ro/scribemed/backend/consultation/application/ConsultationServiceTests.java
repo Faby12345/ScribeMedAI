@@ -44,6 +44,12 @@ import ro.scribemed.backend.consultation.dto.NotesResponse;
 import ro.scribemed.backend.consultation.infrastructure.ConsultationNotesRepository;
 import ro.scribemed.backend.consultation.infrastructure.ConsultationRepository;
 import ro.scribemed.backend.consultation.infrastructure.HuggingFaceClinicalNoteGenerationProvider;
+import ro.scribemed.backend.document.domain.ClinicalDocument;
+import ro.scribemed.backend.document.domain.DocumentVersion;
+import ro.scribemed.backend.document.domain.DocumentVersionSource;
+import ro.scribemed.backend.document.domain.DocumentVersionStatus;
+import ro.scribemed.backend.document.infrastructure.ClinicalDocumentRepository;
+import ro.scribemed.backend.document.infrastructure.DocumentVersionRepository;
 import ro.scribemed.backend.identity.domain.AppUser;
 import ro.scribemed.backend.identity.domain.UserRole;
 import ro.scribemed.backend.identity.domain.UserStatus;
@@ -51,7 +57,6 @@ import ro.scribemed.backend.identity.infrastructure.AppUserRepository;
 import ro.scribemed.backend.patient.domain.Patient;
 import ro.scribemed.backend.patient.infrastructure.PatientRepository;
 import ro.scribemed.backend.processing.domain.ProcessingJob;
-import ro.scribemed.backend.processing.domain.ProcessingJobStatus;
 import ro.scribemed.backend.processing.domain.ProcessingJobType;
 import ro.scribemed.backend.processing.infrastructure.ProcessingJobRepository;
 import ro.scribemed.backend.prescribedMedication.application.PrescribedMedicationService;
@@ -74,6 +79,8 @@ class ConsultationServiceTests {
     private final AuditService auditService = mock(AuditService.class);
     private final ConsultationNotesRepository consultationNotesRepository = mock(ConsultationNotesRepository.class);
     private final PrescribedMedicationService prescribedMedicationService = mock(PrescribedMedicationService.class);
+    private final ClinicalDocumentRepository clinicalDocumentRepository = mock(ClinicalDocumentRepository.class);
+    private final DocumentVersionRepository documentVersionRepository = mock(DocumentVersionRepository.class);
 
     private final ConsultationService consultationService = new ConsultationService(
             consultationRepository,
@@ -87,7 +94,9 @@ class ConsultationServiceTests {
             auditService,
             25_000_000,
             consultationNotesRepository,
-            prescribedMedicationService
+            prescribedMedicationService,
+            clinicalDocumentRepository,
+            documentVersionRepository
     );
 
     @Test
@@ -338,7 +347,9 @@ class ConsultationServiceTests {
                 auditService,
                 3,
                 consultationNotesRepository,
-                prescribedMedicationService
+                prescribedMedicationService,
+                clinicalDocumentRepository,
+                documentVersionRepository
         );
         when(consultationRepository.findByIdAndTenant_Id(consultationId, tenantId))
                 .thenReturn(Optional.of(consultation));
@@ -385,7 +396,7 @@ class ConsultationServiceTests {
     }
 
     @Test
-    void processNotesCreatesMedicationPlanBeforeQueuingDocumentGeneration() {
+    void processNotesCreatesMedicationPlanAndDoctorDraftWithoutAiJob() {
         UUID tenantId = UUID.randomUUID();
         UUID actorUserId = UUID.randomUUID();
         UUID consultationId = UUID.randomUUID();
@@ -424,7 +435,9 @@ class ConsultationServiceTests {
                 .thenReturn(Optional.of(consultation));
         when(consultationNotesRepository.save(any(ConsultationNotes.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
-        when(processingJobRepository.save(any(ProcessingJob.class)))
+        when(clinicalDocumentRepository.save(any(ClinicalDocument.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(documentVersionRepository.save(any(DocumentVersion.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         NotesResponse response = consultationService.processNotes(
@@ -441,7 +454,14 @@ class ConsultationServiceTests {
                 notesCaptor.getValue(),
                 request.medications()
         );
-        verify(processingJobRepository).save(any(ProcessingJob.class));
-        assertThat(response.status()).isEqualTo(ProcessingJobStatus.PENDING);
+        ArgumentCaptor<DocumentVersion> versionCaptor = ArgumentCaptor.forClass(DocumentVersion.class);
+        verify(documentVersionRepository).save(versionCaptor.capture());
+        verify(processingJobRepository, never()).save(any(ProcessingJob.class));
+        assertThat(versionCaptor.getValue().getSource()).isEqualTo(DocumentVersionSource.DOCTOR_CREATED);
+        assertThat(versionCaptor.getValue().getAiProvider()).isNull();
+        assertThat(versionCaptor.getValue().getSubjective())
+                .isEqualTo("Motivul prezentării:\nMotiv\n\nAnamneză și simptome:\nIstoric");
+        assertThat(response.status()).isEqualTo(DocumentVersionStatus.DRAFT);
+        assertThat(consultation.getStatus()).isEqualTo(ConsultationStatus.NOTES_READY);
     }
 }

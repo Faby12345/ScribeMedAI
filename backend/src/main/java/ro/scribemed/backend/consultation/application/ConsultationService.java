@@ -39,12 +39,16 @@ import ro.scribemed.backend.consultation.dto.NotesResponse;
 import ro.scribemed.backend.consultation.dto.TranscriptResponse;
 import ro.scribemed.backend.consultation.infrastructure.ConsultationNotesRepository;
 import ro.scribemed.backend.consultation.infrastructure.ConsultationRepository;
+import ro.scribemed.backend.document.domain.ClinicalDocument;
+import ro.scribemed.backend.document.domain.DocumentVersion;
+import ro.scribemed.backend.document.domain.DocumentVersionSource;
+import ro.scribemed.backend.document.infrastructure.ClinicalDocumentRepository;
+import ro.scribemed.backend.document.infrastructure.DocumentVersionRepository;
 import ro.scribemed.backend.identity.domain.AppUser;
 import ro.scribemed.backend.identity.infrastructure.AppUserRepository;
 import ro.scribemed.backend.patient.domain.Patient;
 import ro.scribemed.backend.patient.infrastructure.PatientRepository;
 import ro.scribemed.backend.processing.domain.ProcessingJob;
-import ro.scribemed.backend.processing.domain.ProcessingJobStatus;
 import ro.scribemed.backend.processing.domain.ProcessingJobType;
 import ro.scribemed.backend.processing.infrastructure.ProcessingJobRepository;
 import ro.scribemed.backend.prescribedMedication.application.PrescribedMedicationService;
@@ -81,6 +85,8 @@ public class ConsultationService {
     private final long maxAudioSizeBytes;
     private final ConsultationNotesRepository consultationNotesRepository;
     private final PrescribedMedicationService prescribedMedicationService;
+    private final ClinicalDocumentRepository clinicalDocumentRepository;
+    private final DocumentVersionRepository documentVersionRepository;
 
     public ConsultationService(
             ConsultationRepository consultationRepository,
@@ -94,7 +100,9 @@ public class ConsultationService {
             AuditService auditService,
             @Value("${scribemed.audio.max-size-bytes}") long maxAudioSizeBytes,
             ConsultationNotesRepository consultationNotesRepository,
-            PrescribedMedicationService prescribedMedicationService
+            PrescribedMedicationService prescribedMedicationService,
+            ClinicalDocumentRepository clinicalDocumentRepository,
+            DocumentVersionRepository documentVersionRepository
     ) {
         this.consultationRepository = consultationRepository;
         this.patientRepository = patientRepository;
@@ -108,6 +116,8 @@ public class ConsultationService {
         this.maxAudioSizeBytes = maxAudioSizeBytes;
         this.consultationNotesRepository = consultationNotesRepository;
         this.prescribedMedicationService = prescribedMedicationService;
+        this.clinicalDocumentRepository = clinicalDocumentRepository;
+        this.documentVersionRepository = documentVersionRepository;
     }
 
     @Transactional
@@ -300,23 +310,76 @@ public class ConsultationService {
                 request.medications()
         );
 
-        ProcessingJob savedJob =  processingJobRepository.save(new ProcessingJob(
+        ClinicalDocument document = clinicalDocumentRepository
+                .findByConsultation_IdAndTenant_IdAndDocumentType(
+                        consultationId,
+                        tenantId,
+                        "SOAP_NOTE"
+                )
+                .orElseGet(() -> clinicalDocumentRepository.save(new ClinicalDocument(
+                        tenant,
+                        consultation,
+                        "SOAP_NOTE"
+                )));
+
+        DocumentVersion version = documentVersionRepository.save(new DocumentVersion(
                 tenant,
+                document,
                 consultation,
                 savedNotes,
-                ProcessingJobType.STRUCTURE_NOTES
+                document.nextVersionNumber(),
+                DocumentVersionSource.DOCTOR_CREATED,
+                buildSubjective(request.reason(), request.history()),
+                normalizeText(request.objective()),
+                normalizeText(request.assessment()),
+                normalizeText(request.plan()),
+                "[]",
+                null,
+                null,
+                null,
+                null,
+                appUser
         ));
 
+        consultation.markNotesReady();
 
-
-        consultation.markProcessingNotes();
+        auditService.record(
+                tenant,
+                appUser,
+                "MANUAL_CLINICAL_DOCUMENT_CREATED",
+                "CLINICAL_DOCUMENT",
+                document.getId(),
+                Map.of(
+                        "versionNumber", version.getVersionNumber(),
+                        "source", version.getSource().name()
+                )
+        );
 
         return new NotesResponse(
                 savedNotes.getId(),
-                savedJob.getId(),
+                document.getId(),
+                version.getId(),
                 consultationId,
-                ProcessingJobStatus.PENDING
+                version.getStatus()
         );
+    }
+
+    private String buildSubjective(String reason, String history) {
+        String normalizedReason = normalizeText(reason);
+        String normalizedHistory = normalizeText(history);
+
+        if (normalizedReason.isEmpty()) {
+            return normalizedHistory;
+        }
+        if (normalizedHistory.isEmpty()) {
+            return normalizedReason;
+        }
+        return "Motivul prezentării:\n%s\n\nAnamneză și simptome:\n%s"
+                .formatted(normalizedReason, normalizedHistory);
+    }
+
+    private String normalizeText(String value) {
+        return value == null || value.isBlank() ? "" : value.trim();
     }
 
 }

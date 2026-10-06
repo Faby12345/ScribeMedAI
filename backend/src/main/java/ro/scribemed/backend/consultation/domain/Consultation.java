@@ -107,6 +107,10 @@ public class Consultation {
         status = ConsultationStatus.NOTES_FAILED;
     }
 
+    public void markApproved() {
+        status = ConsultationStatus.APPROVED;
+    }
+
     public UUID getId() {
         return id;
     }

@@ -170,7 +170,7 @@ export function AppShell({ children }: AppShellProps) {
       ?.label ?? "ScribeMedAI";
 
   return (
-    <div className="min-h-screen overflow-x-clip bg-[radial-gradient(circle_at_16%_10%,#eaf8ff_0%,transparent_30%),linear-gradient(180deg,#fbfdff_0%,#ffffff_46%,#f6f9fd_100%)] text-foreground">
+    <div className="min-h-screen overflow-x-clip bg-background text-foreground">
       <aside
         id="desktop-navigation"
         data-desktop-sidebar

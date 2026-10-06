@@ -10,7 +10,12 @@ export type DocumentReviewDocument = {
   versionId: string;
   versionNumber: number;
   versionStatus: "DRAFT" | "APPROVED" | "SUPERSEDED";
-  source: "AI_GENERATED" | "DOCTOR_EDITED" | "REGENERATED" | "CORRECTION";
+  source:
+    | "AI_GENERATED"
+    | "DOCTOR_CREATED"
+    | "DOCTOR_EDITED"
+    | "REGENERATED"
+    | "CORRECTION";
   draft: SoapDraft;
   reviewFlags: string[];
   aiProvider: string | null;

@@ -174,6 +174,7 @@ public class DocumentReviewService {
         Instant approvedAt = Instant.now();
         draftVersion.markApproved(approvingUser, approvedAt);
         document.markApproved(approvingUser, approvedAt);
+        document.getConsultation().markApproved();
 
         auditService.record(
                 document.getTenant(),

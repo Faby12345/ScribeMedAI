@@ -17,9 +17,10 @@ export class SendNotesApiError extends Error {
         UUID consultationId,
         ProcessingJobStatus status*/
 
-type SendNotesResponse = {
+export type SendNotesResponse = {
     notesId: string,
-    jobId: string,
+    documentId: string,
+    versionId: string,
     consultationId: string,
     status: string
 }
