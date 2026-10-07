@@ -4,11 +4,18 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NewConsultationPanel } from "@/features/consultations/components/new-consultation-panel";
+import {
+  GetConsultationsApiError,
+  getConsultations,
+} from "@/features/consultations/api/get-consultations";
+import type {
+  Consultation,
+  PaginatedResponse,
+} from "@/features/consultations/types";
 import {
   GetPatientsApiError,
   getPatients,
@@ -17,7 +24,6 @@ import { PatientAvatar } from "@/features/patients/components/patient-avatar";
 import {
   formatDateTime as formatPatientDateTime,
   patientDisplayName,
-  statusLabels as patientStatusLabels,
 } from "@/features/patients/components/patient-formatters";
 import type { Patient } from "@/features/patients/types";
 
@@ -27,83 +33,84 @@ export function DashboardShell() {
 
   return (
     <>
-      <div className="mx-auto w-full max-w-7xl space-y-9 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-        <section
-          aria-labelledby="ai-workspace-title"
-          className="mx-auto max-w-4xl border-b border-border pb-8 text-center"
-        >
-          <div className="mx-auto max-w-2xl">
-            <h1
-              id="ai-workspace-title"
-              className="page-title"
-            >
-              Panou clinic
-            </h1>
-            <p className="secondary-text mx-auto mt-2 max-w-xl">
-              Pornește rapid o consultație sau adaugă pacientul înainte de
-              documentare.
-            </p>
-          </div>
-
-          <div className="mx-auto mt-7 grid max-w-3xl gap-3 sm:grid-cols-2">
-            <Button
-              ref={startConsultationButtonRef}
-              type="button"
-              variant="primary"
-              className="h-auto min-h-28 justify-start p-5 text-left"
-              onClick={() => setIsNewConsultationOpen(true)}
-            >
-              <ConsultationActionIcon />
-              <span className="min-w-0">
-                <span className="block text-base font-semibold">
-                  Consultație nouă
-                </span>
-                <span className="mt-1 block text-sm font-normal opacity-85">
-                  Alege pacientul și deschide fluxul audio.
-                </span>
-              </span>
-            </Button>
-
-            <ButtonLink
-              href="/patients/new"
-              variant="outline"
-              className="h-auto min-h-28 justify-start p-5 text-left"
-            >
-              <PatientActionIcon />
-              <span className="min-w-0">
-                <span className="block text-base font-semibold">
-                  Adaugă pacient
-                </span>
-                <span className="mt-1 block text-sm font-normal text-muted-foreground">
-                  Creează profilul clinic înainte de consultație.
-                </span>
-              </span>
-            </ButtonLink>
-          </div>
-        </section>
-
-        <section
-          aria-labelledby="recent-patients-title"
-          className="mx-auto w-full max-w-4xl"
-        >
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h2 id="recent-patients-title" className="section-title">
-                Pacienți recenți
-              </h2>
-              <p className="secondary-text mt-1">
-                Ultimii 10 pacienți actualizați în registrul clinic.
+      <div className="dashboard-background min-h-[calc(100vh-4.25rem)]">
+        <div className="mx-auto w-full max-w-7xl space-y-10 px-4 py-7 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
+          <section
+            aria-labelledby="ai-workspace-title"
+            className="mx-auto max-w-4xl text-center"
+          >
+            <div className="mx-auto max-w-2xl">
+              <h1 id="ai-workspace-title" className="page-title">
+                Panou clinic
+              </h1>
+              <p className="secondary-text mx-auto mt-2 max-w-xl">
+                Pornește rapid o consultație sau adaugă pacientul înainte de
+                documentare.
               </p>
             </div>
-            <Link
-              href="/patients"
-              className="text-sm font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
-              Toți pacienții
-            </Link>
-          </div>
-          <RecentPatientsList />
-        </section>
+
+            <div className="mx-auto mt-7 grid max-w-3xl gap-3 sm:grid-cols-2">
+              <Button
+                ref={startConsultationButtonRef}
+                type="button"
+                variant="primary"
+                className="h-auto min-h-28 justify-start p-5 text-left sm:min-h-32 sm:p-6"
+                onClick={() => setIsNewConsultationOpen(true)}
+              >
+                <ConsultationActionIcon />
+                <span className="min-w-0">
+                  <span className="block text-base font-semibold">
+                    Consultație nouă
+                  </span>
+                  <span className="mt-1 block text-sm font-normal opacity-85">
+                    Alege pacientul și deschide fluxul audio.
+                  </span>
+                </span>
+              </Button>
+
+              <ButtonLink
+                href="/patients/new"
+                variant="outline"
+                className="h-auto min-h-28 justify-start p-5 text-left sm:min-h-32 sm:p-6"
+              >
+                <PatientActionIcon />
+                <span className="min-w-0">
+                  <span className="block text-base font-semibold">
+                    Adaugă pacient
+                  </span>
+                  <span className="mt-1 block text-sm font-normal text-muted-foreground">
+                    Creează profilul clinic înainte de consultație.
+                  </span>
+                </span>
+              </ButtonLink>
+            </div>
+          </section>
+
+          <DashboardActivity />
+
+          <section
+            aria-labelledby="recent-patients-title"
+            className="mx-auto w-full max-w-4xl"
+          >
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 id="recent-patients-title" className="section-title">
+                  Pacienți recenți
+                </h2>
+                <p className="secondary-text mt-1">
+                  Ultimii 10 pacienți actualizați în registrul clinic.
+                </p>
+              </div>
+              <Link
+                href="/patients"
+                className="text-sm font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                Toți pacienții
+              </Link>
+            </div>
+            <RecentPatientsList />
+          </section>
+        </div>
       </div>
 
       <NewConsultationPanel
@@ -112,6 +119,299 @@ export function DashboardShell() {
         returnFocusRef={startConsultationButtonRef}
       />
     </>
+  );
+}
+
+const consultationPageSize = 100;
+const chartHeightClasses = [
+  "h-1",
+  "h-2",
+  "h-3",
+  "h-5",
+  "h-7",
+  "h-9",
+  "h-11",
+  "h-14",
+  "h-16",
+] as const;
+
+type DailyConsultationActivity = {
+  key: string;
+  shortLabel: string;
+  longLabel: string;
+  count: number;
+};
+
+function DashboardActivity() {
+  const [consultations, setConsultations] = useState<Consultation[]>([]);
+  const [retryKey, setRetryKey] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadConsultations() {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const firstPage = await getConsultations({
+          page: 0,
+          size: consultationPageSize,
+        });
+        const remainingPages = await loadRemainingConsultationPages(firstPage);
+
+        if (isActive) {
+          setConsultations([
+            ...firstPage.content,
+            ...remainingPages.flatMap((page) => page.content),
+          ]);
+        }
+      } catch (loadError) {
+        if (!isActive) {
+          return;
+        }
+
+        if (loadError instanceof GetConsultationsApiError) {
+          setError(loadError.message);
+        } else {
+          setError("Activitatea consultațiilor nu a putut fi încărcată.");
+        }
+      } finally {
+        if (isActive) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadConsultations();
+
+    return () => {
+      isActive = false;
+    };
+  }, [retryKey]);
+
+  const activity = useMemo(
+    () => createConsultationActivity(consultations),
+    [consultations],
+  );
+
+  if (isLoading) {
+    return <DashboardActivitySkeleton />;
+  }
+
+  return (
+    <section
+      aria-labelledby="activity-title"
+      className="mx-auto w-full max-w-4xl border-y border-border bg-background/80 py-6 sm:py-7"
+    >
+      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,0.8fr)_minmax(20rem,1.2fr)] lg:gap-10">
+        <div>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 id="activity-title" className="section-title">
+                Activitatea consultațiilor
+              </h2>
+              <p className="secondary-text mt-1">Rezumat pentru ziua de azi.</p>
+            </div>
+            <Link
+              href="/consultations"
+              className="shrink-0 text-sm font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            >
+              Vezi toate
+            </Link>
+          </div>
+
+          {error ? (
+            <div className="mt-5" role="status">
+              <p className="secondary-text">{error}</p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="mt-2 -ml-3"
+                onClick={() => setRetryKey((current) => current + 1)}
+              >
+                Reîncearcă
+              </Button>
+            </div>
+          ) : (
+            <dl className="mt-5 grid grid-cols-2 divide-x divide-border">
+              <div className="pr-5">
+                <dt className="secondary-text">Consultații astăzi</dt>
+                <dd className="mt-1 text-2xl font-semibold text-foreground">
+                  {activity.todayCount}
+                </dd>
+              </div>
+              <div className="pl-5">
+                <dt className="secondary-text">În așteptarea revizuirii</dt>
+                <dd className="mt-1 text-2xl font-semibold text-warning">
+                  {activity.awaitingReviewCount}
+                </dd>
+              </div>
+            </dl>
+          )}
+        </div>
+
+        {!error ? <ConsultationActivityChart days={activity.days} /> : null}
+      </div>
+    </section>
+  );
+}
+
+async function loadRemainingConsultationPages(
+  firstPage: PaginatedResponse<Consultation>,
+) {
+  if (firstPage.totalPages <= 1) {
+    return [];
+  }
+
+  return Promise.all(
+    Array.from({ length: firstPage.totalPages - 1 }, (_, index) =>
+      getConsultations({ page: index + 1, size: consultationPageSize }),
+    ),
+  );
+}
+
+function createConsultationActivity(consultations: Consultation[]) {
+  const now = new Date();
+  const todayKey = localDateKey(now);
+  const days = createLastSevenDays(now);
+  const countsByDay = new Map(days.map((day) => [day.key, 0]));
+
+  consultations.forEach((consultation) => {
+    const key = localDateKey(new Date(consultation.createdAt));
+    if (countsByDay.has(key)) {
+      countsByDay.set(key, (countsByDay.get(key) ?? 0) + 1);
+    }
+  });
+
+  return {
+    todayCount: countsByDay.get(todayKey) ?? 0,
+    awaitingReviewCount: consultations.filter(
+      (consultation) => consultation.status === "NOTES_READY",
+    ).length,
+    days: days.map((day) => ({
+      ...day,
+      count: countsByDay.get(day.key) ?? 0,
+    })),
+  };
+}
+
+function createLastSevenDays(now: Date): DailyConsultationActivity[] {
+  const formatter = new Intl.DateTimeFormat("ro-RO", { weekday: "short" });
+  const longFormatter = new Intl.DateTimeFormat("ro-RO", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(now);
+    date.setHours(12, 0, 0, 0);
+    date.setDate(now.getDate() - (6 - index));
+
+    return {
+      key: localDateKey(date),
+      shortLabel: formatter.format(date).replace(".", ""),
+      longLabel: longFormatter.format(date),
+      count: 0,
+    };
+  });
+}
+
+function localDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function ConsultationActivityChart({
+  days,
+}: {
+  days: DailyConsultationActivity[];
+}) {
+  const maximumCount = Math.max(...days.map((day) => day.count), 1);
+  const totalCount = days.reduce((total, day) => total + day.count, 0);
+
+  if (totalCount === 0) {
+    return (
+      <div className="flex min-h-28 items-center border-t border-border pt-5 lg:border-l lg:border-t-0 lg:pl-10 lg:pt-0">
+        <div>
+          <p className="text-sm font-medium text-foreground">
+            Nicio consultație în ultimele 7 zile
+          </p>
+          <p className="secondary-text mt-1 max-w-sm">
+            Activitatea va apărea aici după ce creezi prima consultație.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <figure className="border-t border-border pt-5 lg:border-l lg:border-t-0 lg:pl-10 lg:pt-0">
+      <figcaption className="text-sm font-medium text-foreground">
+        Ultimele 7 zile
+      </figcaption>
+      <div
+        className="mt-4 grid h-24 grid-cols-7 items-end gap-2 sm:gap-3"
+        role="img"
+        aria-label={`Consultații în ultimele șapte zile: ${days
+          .map((day) => `${day.longLabel}, ${day.count}`)
+          .join("; ")}`}
+      >
+        {days.map((day) => {
+          const level = Math.ceil(
+            (day.count / maximumCount) * (chartHeightClasses.length - 1),
+          );
+
+          return (
+            <div
+              key={day.key}
+              className="flex h-full min-w-0 flex-col items-center justify-end gap-1.5"
+              title={`${day.longLabel}: ${day.count}`}
+            >
+              <span className="caption-text tabular-nums">{day.count}</span>
+              <span
+                className={`w-full max-w-8 rounded-sm bg-primary ${chartHeightClasses[level]}`}
+                aria-hidden="true"
+              />
+              <span className="caption-text truncate capitalize">
+                {day.shortLabel}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </figure>
+  );
+}
+
+function DashboardActivitySkeleton() {
+  return (
+    <section
+      className="mx-auto w-full max-w-4xl border-y border-border bg-background/80 py-6 sm:py-7"
+      aria-label="Se încarcă activitatea consultațiilor"
+      aria-busy="true"
+    >
+      <div className="grid gap-6 lg:grid-cols-2 lg:gap-10">
+        <div>
+          <Skeleton className="h-5 w-48" />
+          <Skeleton className="mt-3 h-4 w-36" />
+          <div className="mt-5 grid grid-cols-2 gap-5">
+            <Skeleton className="h-14" />
+            <Skeleton className="h-14" />
+          </div>
+        </div>
+        <div className="border-t border-border pt-5 lg:border-l lg:border-t-0 lg:pl-10 lg:pt-0">
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="mt-4 h-20" />
+        </div>
+      </div>
+    </section>
   );
 }
 
