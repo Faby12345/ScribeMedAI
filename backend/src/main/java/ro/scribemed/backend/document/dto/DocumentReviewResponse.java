@@ -7,6 +7,7 @@ import java.util.UUID;
 import ro.scribemed.backend.document.domain.ClinicalDocumentStatus;
 import ro.scribemed.backend.document.domain.DocumentVersionSource;
 import ro.scribemed.backend.document.domain.DocumentVersionStatus;
+import ro.scribemed.backend.prescribedMedication.dto.PrescribedMedicationResponse;
 
 public record DocumentReviewResponse(
         UUID consultationId,
@@ -24,6 +25,7 @@ public record DocumentReviewResponse(
         String promptVersion,
         String templateVersion,
         Instant versionCreatedAt,
+        List<PrescribedMedicationResponse> medications,
         TranscriptForReviewResponse transcript
 ) {
 

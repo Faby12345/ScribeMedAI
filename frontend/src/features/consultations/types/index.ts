@@ -7,7 +7,8 @@ export type ConsultationStatus =
   | "TRANSCRIPTION_FAILED"
   | "NOTES_PROCESSING"
   | "NOTES_READY"
-  | "NOTES_FAILED";
+  | "NOTES_FAILED"
+  | "APPROVED";
 
 export type Consultation = {
   id: string;

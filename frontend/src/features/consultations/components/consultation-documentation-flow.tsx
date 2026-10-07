@@ -12,11 +12,14 @@ import {
   ConfirmPatientInformedApiError,
 } from "@/features/consultations/api/confirm-patient-informed";
 import { sendAudio, SendAudioApiError } from "@/features/consultations/api/send-audio";
-import {sendNotes, SendNotesApiError} from "@/features/consultations/api/send-notes";
+import { sendNotes, SendNotesApiError } from "@/features/consultations/api/send-notes";
+import { MedicationPlanEditor } from "@/features/medication/components/medication-plan-editor";
+import type { PrescribedMedicationDraft } from "@/features/medication/types";
 
 type DocumentationSource = "audio" | "notes";
 type FlowStep = "source" | "capture";
 type AudioMode = "record" | "upload";
+type ClinicalNoteTextField = "reason" | "history" | "objective" | "assessment" | "plan";
 
 export type ClinicalNotes = {
   reason: string;
@@ -24,6 +27,7 @@ export type ClinicalNotes = {
   objective: string;
   assessment: string;
   plan: string;
+  medications: PrescribedMedicationDraft[];
 };
 
 type ConsultationDocumentationFlowProps = {
@@ -37,6 +41,7 @@ const emptyNotes: ClinicalNotes = {
   objective: "",
   assessment: "",
   plan: "",
+  medications: [],
 };
 
 const testClinicalNotes: ClinicalNotes = {
@@ -48,6 +53,7 @@ const testClinicalNotes: ClinicalNotes = {
   assessment:
     "Tablou clinic sugestiv pentru infecție acută de căi respiratorii superioare, formă ușoară, fără semne de alarmă la evaluarea curentă.",
   plan: "Tratament simptomatic, hidratare, repaus relativ și reevaluare dacă apare febră persistentă, dispnee, agravarea tusei sau stare generală alterată.",
+  medications: [],
 };
 
 const showTestNotesPrefill = process.env.NODE_ENV !== "production";
@@ -75,8 +81,23 @@ export function ConsultationDocumentationFlow({
   const audioChunksRef = useRef<Blob[]>([]);
 
   const hasNotes = useMemo(
-    () => Object.values(notes).some((value) => value.trim().length > 0),
+    () =>
+      [notes.reason, notes.history, notes.objective, notes.assessment, notes.plan].some(
+        (value) => value.trim().length > 0,
+      ) || notes.medications.length > 0,
     [notes],
+  );
+
+  const hasCompleteMedicationPlan = useMemo(
+    () =>
+      notes.medications.every(
+        (item) =>
+          item.dose.trim().length > 0 &&
+          item.administrationRoute.trim().length > 0 &&
+          item.frequency.trim().length > 0 &&
+          item.duration.trim().length > 0,
+      ),
+    [notes.medications],
   );
 
   const canContinue = source === "notes" || patientInformed;
@@ -85,7 +106,7 @@ export function ConsultationDocumentationFlow({
       ? audioMode === "record"
         ? recordingState === "recorded" && Boolean(recordedAudioBlob)
         : Boolean(selectedAudioFile)
-      : hasNotes;
+      : hasNotes && hasCompleteMedicationPlan;
 
   useEffect(() => {
     if (recordingState !== "recording") {
@@ -179,7 +200,7 @@ export function ConsultationDocumentationFlow({
     setRecordingError(null);
   }
 
-  function updateNote(field: keyof ClinicalNotes, value: string) {
+  function updateNote(field: ClinicalNoteTextField, value: string) {
     setNotes((current) => ({
       ...current,
       [field]: value,
@@ -203,14 +224,15 @@ export function ConsultationDocumentationFlow({
 
       try {
         const response = await sendNotes(consultationId, notes);
-        console.log(response)
-        router.push("/dashboard")
-        router.refresh()
+        router.push(`/consultations/${response.consultationId}/review`);
+        router.refresh();
       } catch (error) {
         setRecordingError(
-            error instanceof SendNotesApiError ? error.message : "Notitele nu au putut fi trimise. Incearca din nou"
-        )
-        setIsSubmitting(false)
+          error instanceof SendNotesApiError
+            ? error.message
+            : "Notițele nu au putut fi salvate. Încearcă din nou.",
+        );
+        setIsSubmitting(false);
       }
 
 
@@ -238,7 +260,7 @@ export function ConsultationDocumentationFlow({
         }
 
         await sendAudio(consultationId, audioFile);
-        router.push("/dashboard");
+        router.push(`/consultations/${consultationId}`);
         router.refresh();
       } catch (error) {
         setRecordingError(
@@ -255,21 +277,17 @@ export function ConsultationDocumentationFlow({
   return (
     <section
       aria-labelledby="documentation-flow-title"
-      className="relative min-w-0 overflow-x-clip rounded-xl bg-white/72 px-1 py-2 sm:px-2"
+      className="min-w-0"
     >
-      <div
-        className="pointer-events-none absolute inset-x-8 top-0 h-px bg-[linear-gradient(90deg,transparent,#9fdcf1,transparent)]"
-        aria-hidden="true"
-      />
-      <div className="relative">
-        <div className="mb-6 flex min-w-0 flex-col gap-4 border-b border-border/70 pb-5 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <div className="mb-7 flex min-w-0 flex-col gap-5 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
-            <h2 id="documentation-flow-title" className="section-title">
+            <h2 id="documentation-flow-title" className="text-xl font-semibold text-foreground">
               Documentare consultație
             </h2>
             <p className="secondary-text mt-1 max-w-2xl">
-              Trimite audio sau notițe clinice. Procesarea și generarea SOAP
-              continuă în fundal.
+              Trimite audio pentru procesare sau creează direct un document din
+              notițele clinice.
             </p>
           </div>
           <StepIndicator currentStep={step} />
@@ -309,6 +327,9 @@ export function ConsultationDocumentationFlow({
               setRecordingState("idle");
             }}
             onNoteChange={updateNote}
+            onMedicationsChange={(medications) =>
+              setNotes((current) => ({ ...current, medications }))
+            }
             onResetAudio={resetAudio}
             onStartRecording={startRecording}
             onStopRecording={stopRecording}
@@ -328,28 +349,32 @@ function StepIndicator({ currentStep }: { currentStep: FlowStep }) {
   ];
 
   return (
-    <ol className="flex flex-wrap gap-2" aria-label="Pași documentare">
+    <ol className="flex items-center" aria-label="Pași documentare">
       {steps.map((step, index) => {
         const isActive = currentStep === step.key;
+        const isComplete = currentStep === "capture" && step.key === "source";
 
         return (
           <li
             key={step.key}
             className={cn(
-              "inline-flex min-w-0 items-center gap-2 rounded-full px-3 py-1.5 text-sm",
-              isActive
-                ? "bg-info-soft text-primary"
-                : "bg-transparent text-muted-foreground",
+              "relative inline-flex min-w-0 items-center gap-2 text-sm",
+              index > 0 ? "ml-8 before:absolute before:right-full before:top-1/2 before:mr-2 before:h-px before:w-4 before:bg-border" : undefined,
+              isActive ? "font-semibold text-foreground" : "text-muted-foreground",
             )}
           >
             <span
               className={cn(
-                "inline-flex size-5 items-center justify-center rounded-full text-xs",
-                isActive ? "bg-primary text-primary-foreground" : "bg-secondary",
+                "inline-flex size-6 items-center justify-center rounded-full border text-xs",
+                isActive
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : isComplete
+                    ? "border-primary bg-primary-soft text-primary"
+                    : "border-border bg-surface text-muted-foreground",
               )}
               aria-hidden="true"
             >
-              {index + 1}
+              {isComplete ? <CheckIcon /> : index + 1}
             </span>
             {step.label}
           </li>
@@ -378,7 +403,16 @@ function SourceStep({
 
   return (
     <div className="grid min-w-0 gap-6">
-      <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+      <div>
+        <h3 className="text-base font-semibold text-foreground">
+          Alege sursa documentării
+        </h3>
+        <p className="secondary-text mt-1">
+          Poți înregistra consultația sau poți completa documentul manual.
+        </p>
+      </div>
+
+      <div className="divide-y divide-border border-y border-border" role="group" aria-label="Sursa documentării">
         <SourceChoice
           value="audio"
           currentValue={source}
@@ -390,13 +424,13 @@ function SourceStep({
           value="notes"
           currentValue={source}
           title="Notițe"
-          description="Notițe clinice structurate, trimise direct pentru generarea draftului SOAP."
+          description="Notițe clinice structurate, salvate direct ca draft fără procesare AI."
           onChange={onSourceChange}
         />
       </div>
 
       {source === "audio" ? (
-        <div className="max-w-2xl">
+        <div className="max-w-2xl rounded-[var(--radius-control)] bg-surface-muted px-4 py-3">
           <Checkbox
             checked={patientInformed}
             disabled={isPatientAlreadyInformed}
@@ -415,7 +449,7 @@ function SourceStep({
         </Alert>
       ) : null}
 
-      <div className="flex justify-end border-t border-border/70 pt-4">
+      <div className="flex justify-end pt-1">
         <Button
           type="button"
           className="w-full sm:w-auto"
@@ -448,25 +482,32 @@ function SourceChoice({
     <button
       type="button"
       className={cn(
-        "group min-w-0 rounded-xl px-4 py-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "group flex w-full min-w-0 items-start gap-4 px-1 py-5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
         isSelected
-          ? "bg-[linear-gradient(135deg,#ffffff_0%,#eef9ff_100%)] text-foreground"
-          : "bg-transparent text-muted-foreground hover:bg-white/70 hover:text-foreground",
+          ? "text-foreground"
+          : "text-muted-foreground hover:bg-surface-muted/70 hover:text-foreground",
       )}
-      aria-pressed={isSelected}
+      role="radio"
+      aria-checked={isSelected}
       onClick={() => onChange(value)}
     >
-      <span className="flex min-w-0 items-center gap-3">
-        <span
-          className={cn(
-            "size-2.5 rounded-full",
-            isSelected ? "bg-primary" : "bg-muted-foreground",
-          )}
-          aria-hidden="true"
-        />
-        <span className="text-base font-semibold">{title}</span>
+      <span className={cn(
+        "mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-control)]",
+        isSelected ? "bg-primary-soft text-primary" : "bg-surface-muted text-muted-foreground",
+      )} aria-hidden="true">
+        {value === "audio" ? <AudioIcon /> : <NotesIcon />}
       </span>
-      <span className="secondary-text mt-2 block">{description}</span>
+      <span className="min-w-0 flex-1">
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="text-base font-semibold">{title}</span>
+          {isSelected ? <span className="text-xs font-medium text-primary">Selectat</span> : null}
+        </span>
+        <span className="secondary-text mt-1 block max-w-xl">{description}</span>
+      </span>
+      <span className={cn(
+        "mt-2 size-4 shrink-0 rounded-full border-2",
+        isSelected ? "border-[5px] border-primary" : "border-input",
+      )} aria-hidden="true" />
     </button>
   );
 }
@@ -486,6 +527,7 @@ function CaptureStep({
   onBack,
   onFileSelected,
   onNoteChange,
+  onMedicationsChange,
   onResetAudio,
   onStartRecording,
   onStopRecording,
@@ -505,7 +547,8 @@ function CaptureStep({
   onAudioModeChange: (mode: AudioMode) => void;
   onBack: () => void;
   onFileSelected: (file: File) => void;
-  onNoteChange: (field: keyof ClinicalNotes, value: string) => void;
+  onNoteChange: (field: ClinicalNoteTextField, value: string) => void;
+  onMedicationsChange: (medications: PrescribedMedicationDraft[]) => void;
   onResetAudio: () => void;
   onStartRecording: () => void;
   onStopRecording: () => void;
@@ -514,6 +557,16 @@ function CaptureStep({
 }) {
   return (
     <div className="grid min-w-0 gap-6">
+      <div>
+        <h3 className="text-base font-semibold text-foreground">
+          {source === "audio" ? "Pregătește înregistrarea" : "Completează notițele clinice"}
+        </h3>
+        <p className="secondary-text mt-1">
+          {source === "audio"
+            ? "Înregistrează direct sau selectează un fișier audio existent."
+            : "Completează numai informațiile relevante; câmpurile pot fi editate și în etapa de revizuire."}
+        </p>
+      </div>
       {source === "audio" ? (
         <AudioCapture
           audioMode={audioMode}
@@ -529,17 +582,26 @@ function CaptureStep({
           onStopRecording={onStopRecording}
         />
       ) : (
-        <NotesCapture
-          notes={notes}
-          onChange={onNoteChange}
-          onPrefillTestNotes={onPrefillTestNotes}
-        />
+        <>
+          {recordingError ? (
+            <Alert variant="error" title="Documentul nu a putut fi salvat">
+              {recordingError}
+            </Alert>
+          ) : null}
+          <NotesCapture
+            notes={notes}
+            onChange={onNoteChange}
+            onMedicationsChange={onMedicationsChange}
+            onPrefillTestNotes={onPrefillTestNotes}
+          />
+        </>
       )}
 
-      <div className="flex min-w-0 flex-col gap-3 border-t border-border/70 pt-4 md:flex-row md:items-center md:justify-between">
+      <div className="sticky bottom-0 z-20 -mx-5 flex min-w-0 flex-col gap-3 border-t border-border bg-surface px-5 py-4 sm:-mx-6 sm:px-6 md:flex-row md:items-center md:justify-between">
         <p className="secondary-text min-w-0 max-w-xl">
-          După trimitere revii în panou. Transcrierea și generarea SOAP vor
-          continua în fundal când backendul va conecta acest pas.
+          {source === "audio"
+            ? "După trimitere revii în panou. Transcrierea și generarea SOAP continuă în fundal."
+            : "Notițele sunt salvate direct ca draft clinic și nu sunt trimise unui furnizor AI."}
         </p>
         <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end md:w-auto md:shrink-0">
           <Button
@@ -559,7 +621,7 @@ function CaptureStep({
             className="w-full sm:w-auto"
             onClick={onSubmit}
           >
-            Trimite spre procesare
+            {source === "audio" ? "Trimite spre procesare" : "Salvează documentul"}
           </Button>
         </div>
       </div>
@@ -594,7 +656,7 @@ function AudioCapture({
 }) {
   return (
     <div className="grid min-w-0 gap-5">
-      <div className="grid w-full grid-cols-2 rounded-full bg-surface-muted p-1 sm:inline-grid sm:w-fit">
+      <div className="flex w-full border-b border-border sm:w-fit">
         <ModeButton
           isSelected={audioMode === "record"}
           label="Înregistrează"
@@ -614,7 +676,7 @@ function AudioCapture({
       ) : null}
 
       {audioMode === "record" ? (
-        <div className="grid min-w-0 gap-4 rounded-xl bg-[linear-gradient(135deg,#ffffff_0%,#f0faff_100%)] p-4 sm:p-5">
+        <div className="grid min-w-0 gap-5 border-y border-border py-6">
           <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="min-w-0">
               <p className="text-lg font-semibold text-foreground">
@@ -624,7 +686,7 @@ function AudioCapture({
                     ? "Audio pregătit"
                     : "Recorder audio"}
               </p>
-              <p className="mt-1 text-3xl font-semibold tracking-normal text-primary">
+              <p className="mt-1 text-3xl font-semibold tracking-normal text-primary" aria-live="polite">
                 {formatDuration(recordingSeconds)}
               </p>
             </div>
@@ -693,16 +755,18 @@ function AudioCapture({
 function NotesCapture({
   notes,
   onChange,
+  onMedicationsChange,
   onPrefillTestNotes,
 }: {
   notes: ClinicalNotes;
-  onChange: (field: keyof ClinicalNotes, value: string) => void;
+  onChange: (field: ClinicalNoteTextField, value: string) => void;
+  onMedicationsChange: (medications: PrescribedMedicationDraft[]) => void;
   onPrefillTestNotes: () => void;
 }) {
   return (
-    <div className="grid min-w-0 gap-4">
+    <div className="grid min-w-0 gap-5">
       {showTestNotesPrefill ? (
-        <div className="flex min-w-0 flex-col gap-3 rounded-xl bg-surface-muted p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 flex-col gap-3 border-y border-border bg-surface-muted px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-foreground">
               Date fictive pentru testare
@@ -751,6 +815,10 @@ function NotesCapture({
         value={notes.plan}
         onChange={(value) => onChange("plan", value)}
       />
+      <MedicationPlanEditor
+        value={notes.medications}
+        onChange={onMedicationsChange}
+      />
     </div>
   );
 }
@@ -772,7 +840,7 @@ function NoteField({
       <Textarea
         id={id}
         value={value}
-        className="min-h-24 border-border/70 bg-white/82 shadow-none"
+        className="min-h-28 border-input bg-surface shadow-none"
         onChange={(event) => onChange(event.target.value)}
       />
     </label>
@@ -792,9 +860,9 @@ function ModeButton({
     <button
       type="button"
       className={cn(
-        "min-h-9 min-w-0 rounded-full px-3 py-2 text-sm font-medium leading-tight transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "relative min-h-10 min-w-0 px-4 py-2 text-sm font-medium leading-tight transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         isSelected
-          ? "bg-white text-primary shadow-surface"
+          ? "text-primary after:absolute after:inset-x-2 after:bottom-[-1px] after:h-0.5 after:bg-primary"
           : "text-muted-foreground hover:text-foreground",
       )}
       aria-pressed={isSelected}
@@ -803,6 +871,18 @@ function ModeButton({
       {label}
     </button>
   );
+}
+
+function AudioIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="size-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6" /></svg>;
+}
+
+function NotesIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="size-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h9l3 3v15H6z" /><path d="M14 3v4h4M9 11h6M9 15h6" /></svg>;
+}
+
+function CheckIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="size-3.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 4 4L19 6" /></svg>;
 }
 
 function formatDuration(totalSeconds: number) {

@@ -17,9 +17,10 @@ export class SendNotesApiError extends Error {
         UUID consultationId,
         ProcessingJobStatus status*/
 
-type SendNotesResponse = {
+export type SendNotesResponse = {
     notesId: string,
-    jobId: string,
+    documentId: string,
+    versionId: string,
     consultationId: string,
     status: string
 }
@@ -38,7 +39,23 @@ export async function sendNotes (
             method: "POST",
             headers: createHeaders(csrfToken),
             credentials: "include",
-            body: JSON.stringify( notes ),
+            body: JSON.stringify({
+                reason: notes.reason,
+                history: notes.history,
+                objective: notes.objective,
+                assessment: notes.assessment,
+                plan: notes.plan,
+                medications: notes.medications.map((item) => ({
+                    cimCode: item.medication.cimCode,
+                    dose: item.dose,
+                    administrationRoute: item.administrationRoute,
+                    frequency: item.frequency,
+                    duration: item.duration,
+                    quantity: item.quantity || null,
+                    instructions: item.instructions || null,
+                    notes: item.notes || null,
+                })),
+            }),
         })
     } catch (e) {
         if(e instanceof SendNotesApiError){

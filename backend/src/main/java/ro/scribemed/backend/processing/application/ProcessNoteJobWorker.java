@@ -79,7 +79,8 @@ public class ProcessNoteJobWorker {
                     notes.getAssessment(),
                     notes.getHistory(),
                     notes.getObjective(),
-                    notes.getPlan()
+                    notes.getPlan(),
+                    List.of()
             ));
 
             transactionTemplate.executeWithoutResult(status ->

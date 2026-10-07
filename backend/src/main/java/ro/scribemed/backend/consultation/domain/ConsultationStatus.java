@@ -10,5 +10,6 @@ public enum ConsultationStatus {
 
     NOTES_PROCESSING,
     NOTES_READY,
-    NOTES_FAILED
+    NOTES_FAILED,
+    APPROVED
 }

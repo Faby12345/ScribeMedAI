@@ -25,6 +25,8 @@ import ro.scribemed.backend.document.infrastructure.ClinicalDocumentRepository;
 import ro.scribemed.backend.document.infrastructure.DocumentVersionRepository;
 import ro.scribemed.backend.identity.domain.AppUser;
 import ro.scribemed.backend.identity.infrastructure.AppUserRepository;
+import ro.scribemed.backend.prescribedMedication.dto.PrescribedMedicationResponse;
+import ro.scribemed.backend.prescribedMedication.infrastructure.PrescribedMedicationRepository;
 import ro.scribemed.backend.transcription.domain.ConsultationTranscript;
 import ro.scribemed.backend.transcription.infrastructure.ConsultationTranscriptRepository;
 
@@ -39,6 +41,7 @@ public class DocumentReviewService {
     private final DocumentVersionRepository documentVersionRepository;
     private final ConsultationTranscriptRepository transcriptRepository;
     private final AppUserRepository appUserRepository;
+    private final PrescribedMedicationRepository prescribedMedicationRepository;
     private final AuditService auditService;
     private final ObjectMapper objectMapper;
 
@@ -47,6 +50,7 @@ public class DocumentReviewService {
             DocumentVersionRepository documentVersionRepository,
             ConsultationTranscriptRepository transcriptRepository,
             AppUserRepository appUserRepository,
+            PrescribedMedicationRepository prescribedMedicationRepository,
             AuditService auditService,
             ObjectMapper objectMapper
     ) {
@@ -54,6 +58,7 @@ public class DocumentReviewService {
         this.documentVersionRepository = documentVersionRepository;
         this.transcriptRepository = transcriptRepository;
         this.appUserRepository = appUserRepository;
+        this.prescribedMedicationRepository = prescribedMedicationRepository;
         this.auditService = auditService;
         this.objectMapper = objectMapper;
     }
@@ -72,7 +77,7 @@ public class DocumentReviewService {
 
         ConsultationTranscript transcript = transcriptRepository
                 .findByConsultation_IdAndTenant_Id(consultationId, tenantId)
-                .orElseThrow(() -> new EntityNotFoundException("Transcript not found"));
+                .orElse(null);
 
         return toReviewResponse(consultationId, document, version, transcript);
     }
@@ -135,7 +140,7 @@ public class DocumentReviewService {
 
         ConsultationTranscript transcript = transcriptRepository
                 .findByConsultation_IdAndTenant_Id(document.getConsultation().getId(), tenantId)
-                .orElseThrow(() -> new EntityNotFoundException("Transcript not found"));
+                .orElse(null);
 
         return toReviewResponse(document.getConsultation().getId(), document, savedVersion, transcript);
     }
@@ -169,6 +174,7 @@ public class DocumentReviewService {
         Instant approvedAt = Instant.now();
         draftVersion.markApproved(approvingUser, approvedAt);
         document.markApproved(approvingUser, approvedAt);
+        document.getConsultation().markApproved();
 
         auditService.record(
                 document.getTenant(),
@@ -274,13 +280,34 @@ public class DocumentReviewService {
                 version.getPromptVersion(),
                 version.getTemplateVersion(),
                 version.getCreatedAt(),
-                new DocumentReviewResponse.TranscriptForReviewResponse(
-                        transcript.getProvider(),
-                        transcript.getProviderModel(),
-                        transcript.getLanguage(),
-                        transcript.getTranscriptText(),
-                        transcript.getCreatedAt()
-                )
+                prescribedMedications(version, document.getTenant().getId()),
+                transcript == null
+                        ? null
+                        : new DocumentReviewResponse.TranscriptForReviewResponse(
+                                transcript.getProvider(),
+                                transcript.getProviderModel(),
+                                transcript.getLanguage(),
+                                transcript.getTranscriptText(),
+                                transcript.getCreatedAt()
+                        )
         );
+    }
+
+    private List<PrescribedMedicationResponse> prescribedMedications(
+            DocumentVersion version,
+            UUID tenantId
+    ) {
+        if (version.getSourceNotes() == null) {
+            return List.of();
+        }
+
+        return prescribedMedicationRepository
+                .findByConsultationNotes_IdAndTenant_IdOrderByPositionAsc(
+                        version.getSourceNotes().getId(),
+                        tenantId
+                )
+                .stream()
+                .map(PrescribedMedicationResponse::from)
+                .toList();
     }
 }
