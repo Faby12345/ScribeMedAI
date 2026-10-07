@@ -71,6 +71,11 @@ services:
       timeout: 5s
       retries: 10
 
+  kafka:
+    image: apache/kafka:4.1.2
+    ports:
+     - "127.0.0.1:9092:9092"
+
 volumes:
   scribemed-backend-audio:
   scribemed-postgres-data:
