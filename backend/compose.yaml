@@ -9,6 +9,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      kafka:
+        condition: service_started
 
     environment:
       DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}

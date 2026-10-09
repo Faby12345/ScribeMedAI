@@ -54,6 +54,7 @@ import ro.scribemed.backend.identity.domain.AppUser;
 import ro.scribemed.backend.identity.domain.UserRole;
 import ro.scribemed.backend.identity.domain.UserStatus;
 import ro.scribemed.backend.identity.infrastructure.AppUserRepository;
+import ro.scribemed.backend.mockPias.application.PiasValidationService;
 import ro.scribemed.backend.patient.domain.Patient;
 import ro.scribemed.backend.patient.infrastructure.PatientRepository;
 import ro.scribemed.backend.processing.domain.ProcessingJob;
@@ -81,7 +82,7 @@ class ConsultationServiceTests {
     private final PrescribedMedicationService prescribedMedicationService = mock(PrescribedMedicationService.class);
     private final ClinicalDocumentRepository clinicalDocumentRepository = mock(ClinicalDocumentRepository.class);
     private final DocumentVersionRepository documentVersionRepository = mock(DocumentVersionRepository.class);
-
+    private final PiasValidationService piasValidationService = mock(PiasValidationService.class);
     private final ConsultationService consultationService = new ConsultationService(
             consultationRepository,
             patientRepository,
@@ -96,7 +97,8 @@ class ConsultationServiceTests {
             consultationNotesRepository,
             prescribedMedicationService,
             clinicalDocumentRepository,
-            documentVersionRepository
+            documentVersionRepository,
+            piasValidationService
     );
 
     @Test
@@ -349,7 +351,8 @@ class ConsultationServiceTests {
                 consultationNotesRepository,
                 prescribedMedicationService,
                 clinicalDocumentRepository,
-                documentVersionRepository
+                documentVersionRepository,
+                piasValidationService
         );
         when(consultationRepository.findByIdAndTenant_Id(consultationId, tenantId))
                 .thenReturn(Optional.of(consultation));
