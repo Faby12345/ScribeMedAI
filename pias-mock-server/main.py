@@ -7,7 +7,7 @@ from pydantic import BaseModel
 app = FastAPI(title="PIAS Mock")
 
 class MockConfig(BaseModel):
-    mode: Literal["success", "unavailable", "slow", "reject"] = "unavailable"
+    mode: Literal["success", "unavailable", "slow", "reject"] = "slow"
     fail_first: int = 0
     delay_seconds: float = 10
 
@@ -16,8 +16,9 @@ attempts = 0
 accepted: dict[str, dict] = {}
 
 class Submission(BaseModel):
-    submission_id: str
-    consultation_id: str
+    jobId: str
+    consultationId: str
+    idempotencyKey: str
 
 @app.post("/mock/config")
 def configure(value: MockConfig):
@@ -31,8 +32,8 @@ async def submit(body: Submission):
     global attempts
 
     # Repeated submissions return the existing result.
-    if body.submission_id in accepted:
-        return accepted[body.submission_id]
+    if body.idempotencyKey in accepted:
+        return accepted[body.idempotencyKey]
 
     attempts += 1
 
@@ -52,13 +53,13 @@ async def submit(body: Submission):
         await asyncio.sleep(config.delay_seconds)
 
     # Recheck after waiting in case another request completed.
-    if body.submission_id not in accepted:
-        accepted[body.submission_id] = {
+    if body.idempotencyKey not in accepted:
+        accepted[body.idempotencyKey] = {
             "status": "accepted",
-            "reference": f"MOCK-{body.submission_id}",
+            "reference": f"MOCK-{body.idempotencyKey}",
         }
 
-    return accepted[body.submission_id]
+    return accepted[body.idempotencyKey]
 
 @app.get("/mock/state")
 def state():

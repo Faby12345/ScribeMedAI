@@ -46,6 +46,7 @@ import ro.scribemed.backend.document.infrastructure.ClinicalDocumentRepository;
 import ro.scribemed.backend.document.infrastructure.DocumentVersionRepository;
 import ro.scribemed.backend.identity.domain.AppUser;
 import ro.scribemed.backend.identity.infrastructure.AppUserRepository;
+import ro.scribemed.backend.mockPias.application.PiasValidationService;
 import ro.scribemed.backend.patient.domain.Patient;
 import ro.scribemed.backend.patient.infrastructure.PatientRepository;
 import ro.scribemed.backend.processing.domain.ProcessingJob;
@@ -87,6 +88,7 @@ public class ConsultationService {
     private final PrescribedMedicationService prescribedMedicationService;
     private final ClinicalDocumentRepository clinicalDocumentRepository;
     private final DocumentVersionRepository documentVersionRepository;
+    private final PiasValidationService piasValidationService;
 
     public ConsultationService(
             ConsultationRepository consultationRepository,
@@ -102,7 +104,7 @@ public class ConsultationService {
             ConsultationNotesRepository consultationNotesRepository,
             PrescribedMedicationService prescribedMedicationService,
             ClinicalDocumentRepository clinicalDocumentRepository,
-            DocumentVersionRepository documentVersionRepository
+            DocumentVersionRepository documentVersionRepository, PiasValidationService piasValidationService
     ) {
         this.consultationRepository = consultationRepository;
         this.patientRepository = patientRepository;
@@ -118,6 +120,7 @@ public class ConsultationService {
         this.prescribedMedicationService = prescribedMedicationService;
         this.clinicalDocumentRepository = clinicalDocumentRepository;
         this.documentVersionRepository = documentVersionRepository;
+        this.piasValidationService = piasValidationService;
     }
 
     @Transactional
@@ -353,6 +356,11 @@ public class ConsultationService {
                         "versionNumber", version.getVersionNumber(),
                         "source", version.getSource().name()
                 )
+        );
+
+        piasValidationService.requestValidation(
+                tenantId,
+                consultationId
         );
 
         return new NotesResponse(
