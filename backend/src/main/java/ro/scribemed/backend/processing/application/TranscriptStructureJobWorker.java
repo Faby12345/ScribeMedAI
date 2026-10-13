@@ -24,6 +24,8 @@ import ro.scribemed.backend.document.domain.DocumentVersion;
 import ro.scribemed.backend.document.domain.DocumentVersionSource;
 import ro.scribemed.backend.document.infrastructure.ClinicalDocumentRepository;
 import ro.scribemed.backend.document.infrastructure.DocumentVersionRepository;
+import ro.scribemed.backend.medicationdraft.domain.MedicationDraftCandidate;
+import ro.scribemed.backend.medicationdraft.infrastructure.MedicationDraftCandidateRepository;
 import ro.scribemed.backend.processing.domain.ProcessingJob;
 import ro.scribemed.backend.processing.infrastructure.ProcessingJobRepository;
 import ro.scribemed.backend.transcription.domain.ConsultationTranscript;
@@ -39,11 +41,13 @@ import ro.scribemed.backend.transcription.infrastructure.ConsultationTranscriptR
 public class TranscriptStructureJobWorker {
 
     private static final Logger log = LoggerFactory.getLogger(TranscriptStructureJobWorker.class);
+    private static final int MAX_MEDICATION_CANDIDATES = 20;
 
     private final ProcessingJobRepository processingJobRepository;
     private final ConsultationTranscriptRepository transcriptRepository;
     private final DocumentVersionRepository documentVersionRepository;
     private final ClinicalDocumentRepository clinicalDocumentRepository;
+    private final MedicationDraftCandidateRepository medicationDraftCandidateRepository;
     private final ObjectMapper objectMapper;
     private final TransactionTemplate transactionTemplate;
     private final ClinicalNoteGenerationProvider clinicalNoteGenerationProvider;
@@ -54,6 +58,7 @@ public class TranscriptStructureJobWorker {
             ConsultationTranscriptRepository transcriptRepository,
             DocumentVersionRepository documentVersionRepository,
             ClinicalDocumentRepository clinicalDocumentRepository,
+            MedicationDraftCandidateRepository medicationDraftCandidateRepository,
             ObjectMapper objectMapper,
             TransactionTemplate transactionTemplate,
             ClinicalNoteGenerationProvider clinicalNoteGenerationProvider
@@ -62,6 +67,7 @@ public class TranscriptStructureJobWorker {
         this.transcriptRepository = transcriptRepository;
         this.documentVersionRepository = documentVersionRepository;
         this.clinicalDocumentRepository = clinicalDocumentRepository;
+        this.medicationDraftCandidateRepository = medicationDraftCandidateRepository;
         this.objectMapper = objectMapper;
         this.transactionTemplate = transactionTemplate;
         this.clinicalNoteGenerationProvider = clinicalNoteGenerationProvider;
@@ -146,7 +152,7 @@ public class TranscriptStructureJobWorker {
 
         int versionNumber = document.nextVersionNumber();
 
-        documentVersionRepository.save(new DocumentVersion(
+        DocumentVersion documentVersion = documentVersionRepository.save(new DocumentVersion(
                 job.getTenant(),
                 document,
                 job.getConsultation(),
@@ -164,6 +170,44 @@ public class TranscriptStructureJobWorker {
                 result.templateVersion(),
                 job.getConsultation().getDoctorUser()
         ));
+
+        ConsultationTranscript transcript = transcriptRepository
+                .findByConsultation_IdAndTenant_Id(
+                        job.getConsultation().getId(),
+                        job.getTenant().getId()
+                )
+                .orElseThrow(() -> new IllegalStateException("Consultation transcript not found"));
+
+        if (result.medications().size() > MAX_MEDICATION_CANDIDATES) {
+            throw new IllegalArgumentException("Medication candidate count exceeds the supported maximum");
+        }
+
+        List<MedicationDraftCandidate> medicationCandidates = new java.util.ArrayList<>(
+                result.medications().size()
+        );
+        for (int position = 0; position < result.medications().size(); position++) {
+            ClinicalNoteGenerationResult.MedicationCandidate medication = result.medications().get(position);
+            medicationCandidates.add(new MedicationDraftCandidate(
+                    job.getTenant(),
+                    job.getConsultation(),
+                    documentVersion,
+                    transcript,
+                    position,
+                    medication.mentionType(),
+                    medication.extractedName(),
+                    null,
+                    medication.dose(),
+                    medication.administrationRoute(),
+                    medication.frequency(),
+                    medication.duration(),
+                    medication.quantity(),
+                    medication.instructions(),
+                    medication.sourceSegmentIds()
+            ));
+        }
+        if (!medicationCandidates.isEmpty()) {
+            medicationDraftCandidateRepository.saveAll(medicationCandidates);
+        }
 
         job.getConsultation().markNotesReady();
         job.markSucceeded(Instant.now());

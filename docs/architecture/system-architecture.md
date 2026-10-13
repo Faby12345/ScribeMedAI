@@ -711,7 +711,8 @@ Tenant / Clinic
 │        └── PrescribedMedication
 ├── ClinicalDocument
 │        └── DocumentVersion
-│                 └── ReviewFlag
+│                 ├── ReviewFlag
+│                 └── MedicationDraftCandidate
 └── Feedback
 ```
 
@@ -844,6 +845,44 @@ ordinea din cerere. Notițele introduse manual și datele planului medicamentos
 nu sunt trimise furnizorului AI. Ele creează direct un document clinic editabil
 cu o versiune `DRAFT` având sursa `DOCTOR_CREATED`. Pipeline-ul AI rămâne
 disponibil doar pentru consultațiile documentate prin audio.
+
+```text
+medication_draft_candidate
+```
+
+```text
+id UUID PK
+tenant_id UUID FK
+consultation_id UUID FK
+document_version_id UUID FK
+transcript_id UUID FK
+position INTEGER
+mention_type VARCHAR
+review_status VARCHAR
+extracted_name VARCHAR
+catalog_cim_code VARCHAR NULL
+dose VARCHAR NULL
+administration_route VARCHAR NULL
+frequency VARCHAR NULL
+duration VARCHAR NULL
+quantity VARCHAR NULL
+instructions TEXT NULL
+source_segment_ids JSONB
+reviewed_by_user_id UUID FK NULL
+reviewed_at TIMESTAMP NULL
+lock_version BIGINT
+created_at TIMESTAMP
+updated_at TIMESTAMP
+```
+
+Medicamentele identificate din transcriere sunt salvate ca propuneri separate
+de planul medicamentos confirmat. O propunere începe cu statusul
+`PENDING_REVIEW` și poate deveni `ACCEPTED_AS_IS`,
+`ACCEPTED_WITH_CHANGES`, `REJECTED` sau `UNRESOLVED` numai în urma revizuirii
+medicului. Doar propunerile acceptate de medic pot crea înregistrări
+`prescribed_medication`; rezultatul AI nu este tratat direct drept prescripție.
+Poziția stabilește exclusiv ordinea de afișare în cadrul versiunii documentului,
+iar `lock_version` este utilizat pentru optimistic locking.
 
 ```text
 consent_record
