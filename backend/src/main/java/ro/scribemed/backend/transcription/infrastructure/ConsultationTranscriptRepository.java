@@ -10,5 +10,5 @@ public interface ConsultationTranscriptRepository extends JpaRepository<Consulta
 
     Optional<ConsultationTranscript> findByConsultation_IdAndTenant_Id(UUID consultationId, UUID tenantId);
 
-    boolean existsByConsultation_Id(UUID consultationId);
+    boolean existsByConsultation_IdAndTenant_Id(UUID consultationId, UUID tenantId);
 }

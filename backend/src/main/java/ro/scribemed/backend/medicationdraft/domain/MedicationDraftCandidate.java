@@ -2,6 +2,7 @@ package ro.scribemed.backend.medicationdraft.domain;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.hibernate.annotations.JdbcTypeCode;
@@ -129,22 +130,51 @@ public class MedicationDraftCandidate {
             String instructions,
             List<String> sourceSegmentIds
     ) {
-        this.tenant = tenant;
-        this.consultation = consultation;
-        this.documentVersion = documentVersion;
-        this.transcript = transcript;
+        if (position < 0) {
+            throw new IllegalArgumentException("position must not be negative");
+        }
+        this.tenant = Objects.requireNonNull(tenant, "tenant must not be null");
+        this.consultation = Objects.requireNonNull(consultation, "consultation must not be null");
+        this.documentVersion = Objects.requireNonNull(documentVersion, "documentVersion must not be null");
+        this.transcript = Objects.requireNonNull(transcript, "transcript must not be null");
         this.position = position;
-        this.mentionType = mentionType;
+        this.mentionType = Objects.requireNonNull(mentionType, "mentionType must not be null");
         this.reviewStatus = MedicationReviewStatus.PENDING_REVIEW;
-        this.extractedName = extractedName;
+        this.extractedName = requireText(extractedName, "extractedName", 255);
         this.catalogMedication = catalogMedication;
-        this.dose = dose;
-        this.administrationRoute = administrationRoute;
-        this.frequency = frequency;
-        this.duration = duration;
-        this.quantity = quantity;
-        this.instructions = instructions;
+        this.dose = normalizeOptionalText(dose, "dose", 255);
+        this.administrationRoute = normalizeOptionalText(
+                administrationRoute,
+                "administrationRoute",
+                100
+        );
+        this.frequency = normalizeOptionalText(frequency, "frequency", 255);
+        this.duration = normalizeOptionalText(duration, "duration", 255);
+        this.quantity = normalizeOptionalText(quantity, "quantity", 255);
+        this.instructions = normalizeOptionalText(instructions, "instructions", 4000);
         this.sourceSegmentIds = sourceSegmentIds == null ? List.of() : List.copyOf(sourceSegmentIds);
+    }
+
+    private String requireText(String value, String fieldName, int maxLength) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(fieldName + " must not be blank");
+        }
+        String normalized = value.strip();
+        if (normalized.length() > maxLength) {
+            throw new IllegalArgumentException(fieldName + " exceeds the maximum length");
+        }
+        return normalized;
+    }
+
+    private String normalizeOptionalText(String value, String fieldName, int maxLength) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        String normalized = value.strip();
+        if (normalized.length() > maxLength) {
+            throw new IllegalArgumentException(fieldName + " exceeds the maximum length");
+        }
+        return normalized;
     }
 
     @PrePersist

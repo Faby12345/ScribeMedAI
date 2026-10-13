@@ -129,7 +129,10 @@ public class TranscriptionJobWorker {
         ProcessingJob job = processingJobRepository.findById(jobId)
                 .orElseThrow(() -> new IllegalStateException("Processing job not found"));
 
-        if (!transcriptRepository.existsByConsultation_Id(job.getConsultation().getId())) {
+        if (!transcriptRepository.existsByConsultation_IdAndTenant_Id(
+                job.getConsultation().getId(),
+                job.getTenant().getId()
+        )) {
             transcriptRepository.save(new ConsultationTranscript(
                     job.getTenant(),
                     job.getConsultation(),

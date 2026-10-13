@@ -19,6 +19,7 @@ import ro.scribemed.backend.consultation.infrastructure.dto.HuggingFaceChatReque
 import ro.scribemed.backend.consultation.infrastructure.dto.HuggingFaceChatResponse;
 import ro.scribemed.backend.consultation.dto.NotesRequest;
 import ro.scribemed.backend.consultation.dto.TranscriptNoteGenerationRequest;
+import ro.scribemed.backend.medicationdraft.domain.MedicationMentionType;
 
 @Component
 public class HuggingFaceClinicalNoteGenerationProvider implements ClinicalNoteGenerationProvider {
@@ -26,11 +27,13 @@ public class HuggingFaceClinicalNoteGenerationProvider implements ClinicalNoteGe
     private static final String PROVIDER = "huggingface";
     private static final String MODEL = "Qwen/Qwen3-32B:cheapest";
     private static final String DOCTOR_NOTES_PROMPT_VERSION = "clinical-note-soap-from-notes-v1";
-    private static final String TRANSCRIPT_PROMPT_VERSION = "clinical-note-soap-from-transcript-v1";
-    private static final String TEMPLATE_VERSION = "soap-v1";
+    private static final String TRANSCRIPT_PROMPT_VERSION = "clinical-note-soap-medications-from-transcript-v2";
+    private static final String SOAP_TEMPLATE_VERSION = "soap-v1";
+    private static final String TRANSCRIPT_TEMPLATE_VERSION = "soap-medications-v1";
     private static final double TEMPERATURE = 0.0;
     private static final int MAX_TOKENS_TEST_CONNECTION = 5;
-    private static final int MAX_TOKENS_NOTES = 1000;
+    private static final int MAX_TOKENS_NOTES = 1600;
+    private static final int MAX_MEDICATION_CANDIDATES = 20;
     private static final Logger log = LoggerFactory.getLogger(HuggingFaceClinicalNoteGenerationProvider.class);
 
     private final RestClient restClient;
@@ -90,7 +93,9 @@ public class HuggingFaceClinicalNoteGenerationProvider implements ClinicalNoteGe
         return generate(
                 doctorNotesSystemPrompt(),
                 doctorNotesUserPrompt(rawNotes),
-                DOCTOR_NOTES_PROMPT_VERSION
+                DOCTOR_NOTES_PROMPT_VERSION,
+                SOAP_TEMPLATE_VERSION,
+                false
         );
     }
 
@@ -99,11 +104,19 @@ public class HuggingFaceClinicalNoteGenerationProvider implements ClinicalNoteGe
         return generate(
                 transcriptSystemPrompt(),
                 transcriptUserPrompt(transcript),
-                TRANSCRIPT_PROMPT_VERSION
+                TRANSCRIPT_PROMPT_VERSION,
+                TRANSCRIPT_TEMPLATE_VERSION,
+                true
         );
     }
 
-    private ClinicalNoteGenerationResult generate(String systemPrompt, String userPrompt, String promptVersion) {
+    private ClinicalNoteGenerationResult generate(
+            String systemPrompt,
+            String userPrompt,
+            String promptVersion,
+            String templateVersion,
+            boolean requireMedications
+    ) {
         HuggingFaceChatRequest request = new HuggingFaceChatRequest(
                 MODEL,
                 List.of(
@@ -151,10 +164,15 @@ public class HuggingFaceClinicalNoteGenerationProvider implements ClinicalNoteGe
             );
         }
 
-        return parseResponse(responseBody, promptVersion);
+        return parseResponse(responseBody, promptVersion, templateVersion, requireMedications);
     }
 
-    private ClinicalNoteGenerationResult parseResponse(String responseBody, String promptVersion) {
+    ClinicalNoteGenerationResult parseResponse(
+            String responseBody,
+            String promptVersion,
+            String templateVersion,
+            boolean requireMedications
+    ) {
         try {
             JsonNode root = objectMapper.readTree(responseBody);
             String content = root.path("choices")
@@ -177,14 +195,21 @@ public class HuggingFaceClinicalNoteGenerationProvider implements ClinicalNoteGe
                     requiredText(generatedNote, "assessment"),
                     requiredText(generatedNote, "plan")
             );
+            List<ClinicalNoteGenerationResult.MedicationCandidate> medications =
+                    parseMedicationCandidates(generatedNote, requireMedications);
             List<String> reviewFlags = parseReviewFlags(generatedNote);
+            if (!medications.isEmpty() && !reviewFlags.contains("MEDICATION_REVIEW")) {
+                reviewFlags = new java.util.ArrayList<>(reviewFlags);
+                reviewFlags.add("MEDICATION_REVIEW");
+            }
 
             return new ClinicalNoteGenerationResult(
                     PROVIDER,
                     root.path("model").asText(MODEL),
                     promptVersion,
-                    TEMPLATE_VERSION,
+                    templateVersion,
                     soapNote,
+                    medications,
                     reviewFlags,
                     responseBody
             );
@@ -224,6 +249,12 @@ public class HuggingFaceClinicalNoteGenerationProvider implements ClinicalNoteGe
                 Nu inventa diagnostice, simptome, tratamente, rezultate de examen obiectiv sau recomandări care nu apar în transcriere.
                 Dacă o secțiune nu are suficiente informații, scrie explicit că informația nu este documentată în transcriere.
                 Marchează pentru verificare afirmațiile clinice incerte, medicamentele, dozele, alergiile, valorile numerice și posibilele erori de negație.
+                Extrage separat numai medicamentele menționate explicit în transcriere.
+                Pentru fiecare medicament, clasifică intenția ca CURRENT, START, CHANGE, STOP sau UNCERTAIN.
+                Nu deduce și nu completa denumiri, doze, căi de administrare, frecvențe, durate, cantități sau instrucțiuni care nu apar explicit.
+                Folosește null pentru orice atribut absent sau incert.
+                Nu genera coduri CIM și nu transforma automat un medicament identificat într-o prescripție.
+                Transcrierea nu conține încă identificatori canonici de segmente; returnează sourceSegmentIds ca listă goală și nu inventa identificatori.
                 Răspunde exclusiv cu JSON valid, fără Markdown și fără text în afara JSON-ului.
                 Schema obligatorie:
                 {
@@ -231,6 +262,19 @@ public class HuggingFaceClinicalNoteGenerationProvider implements ClinicalNoteGe
                   "objective": "string",
                   "assessment": "string",
                   "plan": "string",
+                  "medications": [
+                    {
+                      "mentionType": "CURRENT | START | CHANGE | STOP | UNCERTAIN",
+                      "extractedName": "string",
+                      "dose": "string | null",
+                      "administrationRoute": "string | null",
+                      "frequency": "string | null",
+                      "duration": "string | null",
+                      "quantity": "string | null",
+                      "instructions": "string | null",
+                      "sourceSegmentIds": []
+                    }
+                  ],
                   "reviewFlags": ["string"]
                 }
                 """;
@@ -306,6 +350,108 @@ public class HuggingFaceClinicalNoteGenerationProvider implements ClinicalNoteGe
         return objectMapper.convertValue(
                 reviewFlags,
                 objectMapper.getTypeFactory().constructCollectionType(List.class, String.class)
+        );
+    }
+
+    private List<ClinicalNoteGenerationResult.MedicationCandidate> parseMedicationCandidates(
+            JsonNode generatedNote,
+            boolean required
+    ) {
+        JsonNode medicationsNode = generatedNote.path("medications");
+        if (!medicationsNode.isArray()) {
+            if (!required && medicationsNode.isMissingNode()) {
+                return List.of();
+            }
+            throw invalidSchema();
+        }
+        if (medicationsNode.size() > MAX_MEDICATION_CANDIDATES) {
+            throw invalidSchema();
+        }
+
+        java.util.ArrayList<ClinicalNoteGenerationResult.MedicationCandidate> medications =
+                new java.util.ArrayList<>(medicationsNode.size());
+        for (JsonNode medicationNode : medicationsNode) {
+            if (!medicationNode.isObject()) {
+                throw invalidSchema();
+            }
+
+            MedicationMentionType mentionType;
+            try {
+                mentionType = MedicationMentionType.valueOf(requiredText(
+                        medicationNode,
+                        "mentionType",
+                        30
+                ));
+            } catch (IllegalArgumentException error) {
+                throw invalidSchema();
+            }
+
+            List<String> sourceSegmentIds = parseSourceSegmentIds(medicationNode);
+            if (!sourceSegmentIds.isEmpty()) {
+                throw invalidSchema();
+            }
+
+            medications.add(new ClinicalNoteGenerationResult.MedicationCandidate(
+                    mentionType,
+                    requiredText(medicationNode, "extractedName", 255),
+                    optionalText(medicationNode, "dose", 255),
+                    optionalText(medicationNode, "administrationRoute", 100),
+                    optionalText(medicationNode, "frequency", 255),
+                    optionalText(medicationNode, "duration", 255),
+                    optionalText(medicationNode, "quantity", 255),
+                    optionalText(medicationNode, "instructions", 4000),
+                    sourceSegmentIds
+            ));
+        }
+        return List.copyOf(medications);
+    }
+
+    private List<String> parseSourceSegmentIds(JsonNode medicationNode) {
+        JsonNode sourceSegmentIds = medicationNode.path("sourceSegmentIds");
+        if (!sourceSegmentIds.isArray()) {
+            throw invalidSchema();
+        }
+        for (JsonNode sourceSegmentId : sourceSegmentIds) {
+            if (!sourceSegmentId.isTextual() || sourceSegmentId.asText().isBlank()) {
+                throw invalidSchema();
+            }
+        }
+        return objectMapper.convertValue(
+                sourceSegmentIds,
+                objectMapper.getTypeFactory().constructCollectionType(List.class, String.class)
+        );
+    }
+
+    private String requiredText(JsonNode node, String fieldName, int maxLength) {
+        String value = requiredText(node, fieldName).strip();
+        if (value.length() > maxLength) {
+            throw invalidSchema();
+        }
+        return value;
+    }
+
+    private String optionalText(JsonNode node, String fieldName, int maxLength) {
+        JsonNode valueNode = node.get(fieldName);
+        if (valueNode == null || valueNode.isNull()) {
+            return null;
+        }
+        if (!valueNode.isTextual()) {
+            throw invalidSchema();
+        }
+        String value = valueNode.asText().strip();
+        if (value.isEmpty()) {
+            return null;
+        }
+        if (value.length() > maxLength) {
+            throw invalidSchema();
+        }
+        return value;
+    }
+
+    private ClinicalNoteGenerationProviderException invalidSchema() {
+        return new ClinicalNoteGenerationProviderException(
+                "HUGGINGFACE_RESPONSE_SCHEMA_INVALID",
+                "Clinical note generation response does not match the expected schema"
         );
     }
 
