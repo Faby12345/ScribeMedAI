@@ -34,7 +34,14 @@ public interface ProcessedJobRepository extends JpaRepository<ProcessedJob, UUID
             )
             ON CONFLICT (tenant_id, consumer_name, idempotency_key) DO NOTHING
             """, nativeQuery = true)
-
+    int insertIfAbsent(
+            @Param("id") UUID id,
+            @Param("tenantId") UUID tenantId,
+            @Param("jobId") UUID jobId,
+            @Param("consumerName") String consumerName,
+            @Param("idempotencyKey") String idempotencyKey,
+            @Param("processedAt") Instant processedAt
+    );
 
     Optional<ProcessedJob> findByTenant_IdAndConsumerNameAndIdempotencyKey(
             UUID tenantId,
